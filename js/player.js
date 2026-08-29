@@ -7,7 +7,7 @@
 
 import * as THREE from "three";
 
-const SPEED = 4.4;
+const SPEED = 5.6;
 const PLAYER_R = 0.45;
 const BOUND = 26;
 const FOLLOW_DIST = 1.5; // bride walks this far behind along the trail
@@ -152,7 +152,7 @@ export class Player {
     this.legR = built.legR;
     this.armL = built.armL;
     this.armR = built.armR;
-    this.group.position.set(0, 0, 22.5);
+    this.group.position.set(0, 0, 20);
     this.heading = Math.PI; // face north, toward the village
     this.walkCycle = 0;
     this.moving = false;
@@ -163,8 +163,8 @@ export class Player {
 
     // camera rig
     this.camera = new THREE.PerspectiveCamera(46, innerWidth / innerHeight, 0.1, 160);
-    this.camPos = new THREE.Vector3(0, 8, 32);
-    this.camLook = new THREE.Vector3(0, 1.4, 22.5);
+    this.camPos = new THREE.Vector3(0, 8, 30);
+    this.camLook = new THREE.Vector3(0, 1.4, 20);
     this.camera.position.copy(this.camPos);
   }
 

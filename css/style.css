@@ -39,6 +39,12 @@ html, body {
 
 .hidden { display: none !important; }
 
+/* double-tap on UI must never zoom the page (iOS ignores user-scalable) */
+body, .btn, .icon-btn, .hot-slot, #dialogue, #modal-panel,
+.choice-pill, .stepper button, .modal-close {
+  touch-action: manipulation;
+}
+
 button { font: inherit; cursor: pointer; }
 
 :focus-visible {
@@ -309,7 +315,7 @@ button { font: inherit; cursor: pointer; }
 .icon-btn[aria-pressed="false"] { color: #b3a48d; }
 .icon-btn[aria-pressed="true"] { color: var(--rose-deep); }
 
-/* --- hotbar --- */
+/* --- hotbar: app-icon style slots with function labels --- */
 #hotbar {
   position: absolute;
   bottom: 14px;
@@ -321,38 +327,32 @@ button { font: inherit; cursor: pointer; }
   border-radius: 16px;
 }
 .hot-slot {
-  width: 52px; height: 52px;
+  width: 58px;
+  height: 58px;
   border-radius: 10px;
   border: 3px solid var(--wood-darker);
   background: linear-gradient(180deg, #fff3d6, var(--paper) 70%);
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
   color: var(--wood-dark);
   transition: transform 0.1s ease, filter 0.15s ease;
   position: relative;
 }
-.hot-slot svg { width: 28px; height: 28px; }
-.hot-slot:hover { transform: translateY(-4px); filter: brightness(1.05); }
-.hot-slot .slot-tip {
-  position: absolute;
-  bottom: calc(100% + 10px);
-  left: 50%;
-  transform: translateX(-50%) scale(0.9);
-  background: var(--wood-darker);
-  color: var(--paper);
+.hot-slot svg { width: 24px; height: 24px; }
+.slot-name {
   font-family: var(--font-pixel);
-  font-size: 0.72rem;
-  padding: 3px 9px;
-  border-radius: 8px;
+  font-size: 0.6rem;
+  line-height: 1;
+  color: var(--ink-soft);
+  max-width: 52px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease, transform 0.15s ease;
 }
-.hot-slot:hover .slot-tip, .hot-slot:focus-visible .slot-tip {
-  opacity: 1;
-  transform: translateX(-50%) scale(1);
-}
+.hot-slot:hover { transform: translateY(-4px); filter: brightness(1.05); }
 .hot-slot.seen::after {
   content: "✓";
   position: absolute;
@@ -796,6 +796,32 @@ button { font: inherit; cursor: pointer; }
   text-align: center;
 }
 
+/* onboarding rows */
+.how-list { display: grid; gap: 10px; margin-bottom: 0.4rem; }
+.how-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: var(--white);
+  border: 2px solid var(--paper-shade);
+  border-radius: 12px;
+  padding: 0.65em 0.85em;
+}
+.how-row p { line-height: 1.45; }
+.how-row b { color: var(--wood-dark); }
+.how-ico {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border: 3px solid var(--wood-darker);
+  border-radius: 50%;
+  background: linear-gradient(180deg, #fff3d6, var(--paper-shade));
+  color: var(--wood-dark);
+  display: grid;
+  place-items: center;
+}
+.how-ico svg { width: 24px; height: 24px; }
+
 /* countdown banner in modal */
 .count-banner {
   font-family: var(--font-pixel);
@@ -840,18 +866,32 @@ button { font: inherit; cursor: pointer; }
   position: absolute;
   right: 26px;
   bottom: 104px;
-  width: 76px;
-  height: 76px;
-  border-radius: 50%;
-  font-size: 1.7rem;
-  display: grid;
-  place-items: center;
+  height: 72px;
+  min-width: 72px;
+  padding: 0 20px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  opacity: 0.8;
   pointer-events: auto;
+  transition: opacity 0.2s ease;
 }
+#btn-act svg { width: 30px; height: 30px; flex: 0 0 auto; }
+#btn-act .act-label {
+  display: none;
+  font-family: var(--font-pixel);
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+#btn-act.near { opacity: 1; }
+#btn-act.near .act-label { display: inline; }
 #btn-act.pulse { animation: act-pulse 1.4s ease-in-out infinite; }
 @keyframes act-pulse {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.09); }
+  50% { transform: scale(1.06); }
 }
 
 /* ============ RESPONSIVE ============ */
@@ -868,7 +908,12 @@ button { font: inherit; cursor: pointer; }
   .hot-slot svg { width: 24px; height: 24px; }
   #action-hint { display: none; }
   #joystick { bottom: 78px; left: 18px; width: 104px; height: 104px; }
-  #btn-act { right: 20px; bottom: 92px; width: 68px; height: 68px; }
+  #btn-act { right: 20px; bottom: 92px; height: 64px; min-width: 64px; padding: 0 15px; }
+  #btn-act svg { width: 26px; height: 26px; }
+  #btn-act .act-label { font-size: 0.92rem; }
+  .hot-slot { width: 50px; height: 50px; }
+  .hot-slot svg { width: 20px; height: 20px; }
+  .slot-name { font-size: 0.55rem; max-width: 44px; }
   .title-card { padding: 1.6rem 1.2rem; }
 }
 

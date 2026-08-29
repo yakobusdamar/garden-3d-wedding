@@ -4,6 +4,7 @@
    ============================================================ */
 
 import * as THREE from "three";
+import { SPOTS } from "./data.js";
 
 const WORLD_SIZE = 64; // world spans -32..32 on x and z
 const PX = 1024 / WORLD_SIZE; // ground-canvas pixels per world unit
@@ -98,8 +99,8 @@ function flowerInstanced(count) {
   const dummy = new THREE.Object3D();
   // scatter inside the village but off the paths
   const beds = [
-    [-12, -5.5], [12, -3.5], [-13.5, 8], [11.5, 10], [0, 2],
-    [-6, 14], [7, 12], [-4, -14], [4, -12], [16, 2], [-18, -2],
+    [-9, -4], [9, -2.5], [-12, 7], [10.5, 8.5], [0, 1.5],
+    [-5, 11], [6, 9.5], [-3, -10], [3, -9], [13, 1], [-15, 0],
   ];
   let placed = 0;
   for (let i = 0; i < count; i++) {
@@ -165,10 +166,10 @@ function groundTexture() {
   // pond sand ring
   g.fillStyle = "#e5cf9a";
   g.beginPath();
-  g.arc(px(-8), pz(18), 4.6 * PX, 0, 7);
+  g.arc(px(-7), pz(15), 4.6 * PX, 0, 7);
   g.fill();
 
-  // paths (canvas styles need CSS strings — numeric hex is silently ignored)
+  // paths
   const stroke = (pts, width) => {
     g.strokeStyle = "#c09a5c";
     g.lineWidth = width + 7;
@@ -181,16 +182,16 @@ function groundTexture() {
     g.lineWidth = width;
     g.stroke();
   };
-  stroke([[0, 22], [0, 12], [0, 2]], 26); // spawn to plaza
-  stroke([[0, 2], [-4, -2], [-12, -6]], 24); // to chapel
-  stroke([[0, 2], [5, -1], [12, -4]], 24); // to farmhouse
-  stroke([[0, 2], [0, -8], [0, -11.4]], 22); // to clock tower
-  stroke([[0, 8], [-6, 8], [-12.6, 8]], 20); // to wishing tree
-  stroke([[0, 8], [6, 9], [11.4, 10]], 20); // to photo bench
-  stroke([[0, 16], [1.6, 17], [3.2, 17]], 14); // mailbox spur
+  stroke([[0, 19.5], [0, 10], [0, 1.5]], 26); // spawn to plaza
+  stroke([[0, 1.5], [-3.5, -2], [-9, -4.1]], 24); // to chapel
+  stroke([[0, 1.5], [4, -1.5], [9, -2.6]], 24); // to farmhouse
+  stroke([[0, 1.5], [0, -5], [0, -8.3]], 22); // to clock tower
+  stroke([[0, 5], [-6, 7], [-9, 7]], 20); // to wishing tree
+  stroke([[0, 5], [5, 7], [7.6, 8.5]], 20); // to photo bench
+  stroke([[0, 12], [1.4, 14], [2.8, 14.5]], 14); // mailbox spur
   g.fillStyle = "#d9b078";
-  g.beginPath(); g.arc(px(0), pz(2), 2.6 * PX, 0, 7); g.fill();
-  g.beginPath(); g.arc(px(0), pz(21.4), 1.8 * PX, 0, 7); g.fill();
+  g.beginPath(); g.arc(px(0), pz(1.5), 2.6 * PX, 0, 7); g.fill();
+  g.beginPath(); g.arc(px(0), pz(19.2), 1.8 * PX, 0, 7); g.fill();
 
   // speckles: tiny grass blades
   g.strokeStyle = "rgba(70,130,55,0.5)";
@@ -333,9 +334,87 @@ function buildMailbox() {
   box.position.set(0, 1.25, 0);
   g.add(box);
   g.add(mesh(new THREE.BoxGeometry(0.85, 0.02, 0.64), lam(C.rose), 0, 1.25, 0));
+  // a letter peeking out — this is where guests write
+  const letter = mesh(new THREE.BoxGeometry(0.42, 0.03, 0.26), lam(C.white), 0.05, 1.34, 0.22);
+  letter.rotation.y = -0.35;
+  letter.rotation.z = 0.08;
+  g.add(letter);
   // little flag
   g.add(mesh(new THREE.BoxGeometry(0.05, 0.4, 0.24), lam(C.gold), 0.42, 1.55, 0));
+  // wooden sign so everyone knows what this is
+  g.add(mesh(new THREE.BoxGeometry(0.09, 0.8, 0.09), lam(C.wood), -0.75, 0.4, 0.15));
+  const plate = new THREE.Mesh(
+    new THREE.BoxGeometry(0.72, 0.38, 0.06),
+    new THREE.MeshLambertMaterial({ map: rsvpPlateTexture() })
+  );
+  plate.position.set(-0.75, 0.95, 0.15);
+  g.add(plate);
   return g;
+}
+
+function rsvpPlateTexture() {
+  const cv = document.createElement("canvas");
+  cv.width = 256;
+  cv.height = 128;
+  const g = cv.getContext("2d");
+  g.fillStyle = "#fdf3dc";
+  g.fillRect(0, 0, 256, 128);
+  g.strokeStyle = "#b07a45";
+  g.lineWidth = 10;
+  g.strokeRect(5, 5, 246, 118);
+  g.fillStyle = "#d15e84";
+  g.font = "700 64px 'Pixelify Sans', 'Trebuchet MS', sans-serif";
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillText("RSVP", 128, 70);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/* floating landmark name labels (always visible, fade with distance) */
+function labelPlate(text) {
+  const cv = document.createElement("canvas");
+  const state = { text, cv };
+  const draw = () => {
+    const probe = cv.getContext("2d");
+    const font = "700 46px 'Pixelify Sans', 'Trebuchet MS', sans-serif";
+    probe.font = font;
+    const w = Math.ceil(probe.measureText(state.text).width) + 64;
+    cv.width = w;
+    cv.height = 84;
+    const g = cv.getContext("2d");
+    const plate = (x, y, pw, ph, r, color) => {
+      g.fillStyle = color;
+      g.beginPath();
+      if (g.roundRect) g.roundRect(x, y, pw, ph, r);
+      else g.rect(x, y, pw, ph);
+      g.fill();
+    };
+    plate(0, 0, w, 84, 20, "#5b3a1f");
+    plate(5, 5, w - 10, 74, 16, "#b07a45");
+    plate(12, 12, w - 24, 60, 11, "#fdf3dc");
+    g.fillStyle = "#4a3222";
+    g.font = font;
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillText(state.text, w / 2, 44);
+    return w;
+  };
+  state.w = draw();
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  state.tex = tex;
+  state.redraw = () => {
+    state.w = draw();
+    tex.needsUpdate = true;
+    state.spr.scale.set(state.w * 0.0105, 84 * 0.0105, 1);
+  };
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  spr.scale.set(state.w * 0.0105, 84 * 0.0105, 1);
+  spr.renderOrder = 5;
+  state.spr = spr;
+  return state;
 }
 
 function buildWishingTree() {
@@ -457,7 +536,7 @@ function buildMarker() {
 export function createWorld(scene) {
   const colliders = []; // {x, z, r}
   const markers = new Map(); // spot id -> marker group
-  const anim = { tags: [], butterflies: [], petals: null, clouds: [] };
+  const anim = { tags: [], butterflies: [], petals: null, clouds: [], labels: [] };
   const addCollider = (x, z, r) => colliders.push({ x, z, r });
 
   /* lights & sky */
@@ -493,58 +572,58 @@ export function createWorld(scene) {
     new THREE.MeshLambertMaterial({ color: C.water })
   );
   pond.rotation.x = -Math.PI / 2;
-  pond.position.set(-8, 0.02, 18);
+  pond.position.set(-7, 0.02, 15);
   scene.add(pond);
   const deep = new THREE.Mesh(
     new THREE.CircleGeometry(2.2, 20),
     new THREE.MeshLambertMaterial({ color: C.waterDeep })
   );
   deep.rotation.x = -Math.PI / 2;
-  deep.position.set(-8.4, 0.03, 18.4);
+  deep.position.set(-7.4, 0.03, 15.4);
   scene.add(deep);
   for (let i = 0; i < 5; i++) {
-    const pad = mesh(new THREE.CircleGeometry(0.28 + Math.random() * 0.2, 7), lam(0x5c9a4a), -8 + (Math.random() - 0.5) * 4, 0.05, 18 + (Math.random() - 0.5) * 4);
+    const pad = mesh(new THREE.CircleGeometry(0.28 + Math.random() * 0.2, 7), lam(0x5c9a4a), -7 + (Math.random() - 0.5) * 4, 0.05, 15 + (Math.random() - 0.5) * 4);
     pad.rotation.x = -Math.PI / 2;
     pad.castShadow = false;
     scene.add(pad);
   }
-  addCollider(-8, 18, 4.4);
+  addCollider(-7, 15, 4.4);
 
   /* buildings at data.js coordinates */
   const chapel = buildChapel();
-  chapel.position.set(-12, 0, -10);
+  chapel.position.set(-9, 0, -7.5);
   chapel.rotation.y = Math.PI * 0.12;
   scene.add(chapel);
-  addCollider(-12, -10, 3.6);
+  addCollider(-9, -7.5, 3.6);
 
   const house = buildFarmhouse();
-  house.position.set(12, 0, -8);
+  house.position.set(9, 0, -6);
   house.rotation.y = -Math.PI * 0.14;
   scene.add(house);
-  addCollider(12, -8, 3.2);
+  addCollider(9, -6, 3.2);
 
   const tower = buildClockTower();
-  tower.position.set(0, 0, -15);
+  tower.position.set(0, 0, -11.5);
   scene.add(tower);
-  addCollider(0, -15, 2.2);
+  addCollider(0, -11.5, 2.2);
 
   const mailbox = buildMailbox();
-  mailbox.position.set(3.2, 0, 17);
-  mailbox.rotation.y = Math.PI * 0.75;
+  mailbox.position.set(2.8, 0, 14.5);
+  mailbox.rotation.y = Math.PI * 0.8;
   scene.add(mailbox);
-  addCollider(3.2, 17, 0.5);
+  addCollider(2.8, 14.5, 0.5);
 
   const wishingTree = buildWishingTree();
-  wishingTree.position.set(-16, 0, 8);
+  wishingTree.position.set(-12, 0, 7);
   scene.add(wishingTree);
-  addCollider(-16, 8, 1.5);
+  addCollider(-12, 7, 1.5);
   anim.tags = wishingTree.userData.tags;
 
   const bench = buildPhotoBench();
-  bench.position.set(14, 0, 10);
+  bench.position.set(10.5, 0, 8.5);
   bench.rotation.y = -Math.PI * 0.3;
   scene.add(bench);
-  addCollider(14, 10, 1.2);
+  addCollider(10.5, 8.5, 1.2);
 
   /* welcome sign near spawn */
   const sign = new THREE.Group();
@@ -553,10 +632,10 @@ export function createWorld(scene) {
   sign.add(board);
   sign.add(mesh(new THREE.IcosahedronGeometry(0.13, 0), lam(C.rose, { flatShading: true }), 0.45, 1.62, 0.08));
   sign.add(mesh(new THREE.IcosahedronGeometry(0.1, 0), lam(C.gold, { flatShading: true }), -0.4, 1.45, 0.08));
-  sign.position.set(-1.6, 0, 21);
+  sign.position.set(-1.6, 0, 17.5);
   sign.rotation.y = 0.4;
   scene.add(sign);
-  addCollider(-1.6, 21, 0.5);
+  addCollider(-1.6, 17.5, 0.5);
 
   /* trees around the edge + sprinkled inside */
   const treeSpots = [
@@ -579,9 +658,9 @@ export function createWorld(scene) {
   scene.add(fenceLine(-F, -F, -F, F));
   scene.add(fenceLine(F, -F, F, F));
   // chapel garden fence
-  scene.add(fenceLine(-17, -5, -7, -5));
+  scene.add(fenceLine(-13.5, -4.2, -6, -4.2));
   // farmhouse yard fence
-  scene.add(fenceLine(7, -2, 17, -2));
+  scene.add(fenceLine(5.5, -1.6, 14, -1.6));
 
   /* flowers */
   const [stems, heads] = flowerInstanced(140);
@@ -649,7 +728,7 @@ export function createWorld(scene) {
     const wr = new THREE.Mesh(wingGeo, wingMats[i % 3]);
     wl.position.x = -0.1; wr.position.x = 0.1;
     bf.add(wl, wr);
-    const home = [[-12, -5], [12, -3], [-13, 8], [11, 10], [0, 2], [-8, 18]][i];
+    const home = [[-9, -3], [9, -2], [-12, 7], [10.5, 8.5], [0, 1.5], [-7, 15]][i];
     bf.userData = {
       wl, wr,
       home,
@@ -669,6 +748,19 @@ export function createWorld(scene) {
     m.userData.baseY = MARKER_Y[id];
     markers.set(id, m);
     scene.add(m);
+  }
+
+  /* permanent name labels above each landmark */
+  for (const spot of SPOTS) {
+    const lab = labelPlate(spot.menu);
+    lab.spr.position.set(spot.pos[0], MARKER_Y[spot.id] + 1.05, spot.pos[1]);
+    scene.add(lab.spr);
+    anim.labels.push({ spr: lab.spr, redraw: lab.redraw, x: spot.pos[0], z: spot.pos[1], r: spot.r });
+  }
+  if (document.fonts?.ready) {
+    document.fonts.ready.then(() => {
+      for (const l of anim.labels) l.redraw();
+    });
   }
 
   /* ---------- per-frame world life ---------- */
@@ -706,6 +798,12 @@ export function createWorld(scene) {
     // wishing tags sway
     for (const tag of anim.tags) {
       tag.rotation.x = Math.sin(t * 1.4 + tag.position.x * 3) * 0.25;
+    }
+    // landmark labels: fade with distance, shy when you're close enough to read
+    for (const l of anim.labels) {
+      const d = Math.hypot(playerPos.x - l.x, playerPos.z - l.z);
+      l.spr.material.opacity = THREE.MathUtils.clamp(1.35 - d / 24, 0, 1) * (d < l.r ? 0.25 : 1);
+      l.spr.visible = l.spr.material.opacity > 0.02;
     }
     // markers bob & face camera
     for (const [, m] of markers) {

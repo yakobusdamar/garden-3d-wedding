@@ -9,7 +9,7 @@ import { Player, Bride } from "./player.js";
 import {
   initUI, showDialog, dialogueActive, advance, isModalOpen, closeModal,
   buildHotbar, lightUpSlot, markSeen, updateHUD, toast, setHint,
-  isTouch, setActPulse, showHUD, openModal, setMusicButton,
+  isTouch, updateActionButton, showHUD, openModal, setMusicButton,
 } from "./ui.js";
 import { initAudio, setMusic, musicEnabled, sfxPop, sfxDing, sfxWarp } from "./audio.js";
 
@@ -203,7 +203,7 @@ buildHotbar((spot) => {
   player.strollTo(sx + (dx / d) * stop, sz + (dz / d) * stop);
   strollSpot = spot;
   sfxWarp();
-  toast(`Taking a stroll to the ${spot.label.toLowerCase()}…`);
+  toast(`Strolling to ${spot.menu}…`);
 });
 
 /* ---------- title screen ---------- */
@@ -215,17 +215,26 @@ document.getElementById("btn-start").addEventListener("click", () => {
   updateHUD();
   sfxDing();
   setTimeout(() => {
-    showDialog(
+    const intro = () => showDialog(
       [
         { who: "nana", text: `Welcome to Petalbrook! You found our little village — this whole place is your invitation.` },
         { who: "raka", text: isTouch()
-          ? "Drag the joystick or tap the ground to walk. When a spot bubbles up, tap A to read it!"
+          ? "Drag the joystick or tap the ground to walk. When a spot bubbles up, tap Read to open it!"
           : "Walk with WASD or the arrow keys — or just click the ground. When a spot bubbles up, press Space to read it!" },
         { who: "nana", text: `And yes, I go where he goes. Pick a place from the pack below and we'll stroll there together — or just wander. I'll keep up.` },
       ],
       null,
       () => toast("Visit the mailbox first — it wants your RSVP ✿")
     );
+    let firstVisit = false;
+    try {
+      firstVisit = !localStorage.getItem("pb_onboarded");
+      localStorage.setItem("pb_onboarded", "1");
+    } catch {
+      firstVisit = false;
+    }
+    if (firstVisit) openModal("onboard", intro);
+    else intro();
   }, 450);
 });
 
@@ -275,13 +284,13 @@ function step() {
     }
     if (dialogueActive()) {
       setHint(null);
-      setActPulse(false);
+      updateActionButton("next");
     } else if (currentSpot) {
       setHint(currentSpot.label);
-      setActPulse(true);
+      updateActionButton("read");
     } else {
       setHint(null);
-      setActPulse(false);
+      updateActionButton("idle");
     }
   }
 

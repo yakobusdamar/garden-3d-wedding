@@ -21,18 +21,21 @@ export const VENUE = {
 
 /* The world: every spot is a place you can walk to.
    x / z are world coordinates, r is the interaction radius,
-   stop is how close the couple halts (just outside the building). */
+   stop is how close the couple halts (just outside the building),
+   menu is the short function-first name shown on the hotbar and
+   floating landmark labels. */
 export const SPOTS = [
   {
     id: "sign",
     label: "Welcome Sign",
-    pos: [0, 21],
+    menu: "Welcome",
+    pos: [0, 17.5],
     r: 2.6,
     stop: 1.0,
     dialog: [
       {
         who: "sign",
-        text: "Welcome to Petalbrook, dear guest! This whole village is your invitation — walk around and press the button when a spot lights up.",
+        text: "Welcome to Petalbrook, dear guest! This whole village is your invitation — walk around and the places will tell you everything.",
       },
       {
         who: "sign",
@@ -43,7 +46,8 @@ export const SPOTS = [
   {
     id: "chapel",
     label: "The Chapel",
-    pos: [-12, -10],
+    menu: "The Day",
+    pos: [-9, -7.5],
     r: 4.3,
     stop: 4.1,
     dialog: [
@@ -61,7 +65,8 @@ export const SPOTS = [
   {
     id: "house",
     label: "Farmhouse",
-    pos: [12, -8],
+    menu: "Our Story",
+    pos: [9, -6],
     r: 3.8,
     stop: 3.7,
     dialog: [
@@ -79,13 +84,14 @@ export const SPOTS = [
   {
     id: "mailbox",
     label: "Mailbox",
-    pos: [3.2, 17],
+    menu: "RSVP",
+    pos: [2.8, 14.5],
     r: 2.4,
     stop: 1.0,
     dialog: [
       {
         who: "mailbox",
-        text: "A letter is waiting inside! The postmouse needs your name and whether you can make it.",
+        text: "A letter is waiting inside! Write your name and whether you can make it — the postmouse delivers by morning.",
       },
     ],
     action: { label: "Open RSVP letter", modal: "rsvp" },
@@ -93,7 +99,8 @@ export const SPOTS = [
   {
     id: "gallery",
     label: "Photo Bench",
-    pos: [14, 10],
+    menu: "Album",
+    pos: [10.5, 8.5],
     r: 2.6,
     stop: 1.7,
     dialog: [
@@ -107,7 +114,8 @@ export const SPOTS = [
   {
     id: "wish",
     label: "Wishing Tree",
-    pos: [-16, 8],
+    menu: "Wishes",
+    pos: [-12, 7],
     r: 3.0,
     stop: 2.0,
     dialog: [
@@ -121,7 +129,8 @@ export const SPOTS = [
   {
     id: "clock",
     label: "Clock Tower",
-    pos: [0, -15],
+    menu: "Countdown",
+    pos: [0, -11.5],
     r: 3.2,
     stop: 2.7,
     dialog: [

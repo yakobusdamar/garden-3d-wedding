@@ -248,8 +248,8 @@ export function buildHotbar(onTravel) {
     b.type = "button";
     b.className = "hot-slot";
     b.dataset.id = spot.id;
-    b.setAttribute("aria-label", `Stroll to the ${spot.label}`);
-    b.innerHTML = ICONS[spot.id] + `<span class="slot-tip">${spot.label}</span>`;
+    b.setAttribute("aria-label", `${spot.menu} — ${spot.label}`);
+    b.innerHTML = ICONS[spot.id] + `<span class="slot-name">${spot.menu}</span>`;
     if (seenSpots.has(spot.id)) b.classList.add("seen");
     b.addEventListener("click", () => onTravel(spot));
     bar.appendChild(b);
@@ -314,9 +314,21 @@ export function setHint(label, keyLabel = "Space") {
     hint.classList.add("hidden");
     return;
   }
-  $("#hint-key").textContent = isTouch() ? "A" : keyLabel;
+  $("#hint-key").textContent = isTouch() ? "" : keyLabel;
   $("#hint-label").textContent = label;
   hint.classList.remove("hidden");
+}
+
+/* mobile action button: idle icon → "Read" pill near a landmark → "Next" in dialog */
+let lastActKey = "";
+export function updateActionButton(mode) {
+  const key = `${mode}:${dialogueActive()}`;
+  if (key === lastActKey) return;
+  lastActKey = key;
+  const btn = $("#btn-act");
+  btn.classList.toggle("near", mode !== "idle");
+  btn.classList.toggle("pulse", mode === "read");
+  $("#act-label").textContent = mode === "next" ? "Next" : "Read";
 }
 
 export function isTouch() {
@@ -326,7 +338,7 @@ export function isTouch() {
 }
 
 export function setActPulse(on) {
-  $("#btn-act").classList.toggle("pulse", on);
+  $("#btn-act").classList.toggle("pulse", on && !dialogueActive());
 }
 
 export function showHUD(show) {
@@ -432,9 +444,9 @@ export function isModalOpen() {
   return modal.open;
 }
 
-export function openModal(kind) {
+export function openModal(kind, onClose = null) {
   modal.lastFocus = document.activeElement;
-  const builders = { info: buildInfo, story: buildStory, rsvp: buildRsvp, gallery: buildGallery, wish: buildWish, count: buildCount, help: buildHelp };
+  const builders = { info: buildInfo, story: buildStory, rsvp: buildRsvp, gallery: buildGallery, wish: buildWish, count: buildCount, help: buildHelp, onboard: buildOnboard };
   const build = builders[kind];
   if (!build) return;
   const { title, icon, html, mount } = build();
@@ -443,6 +455,7 @@ export function openModal(kind) {
   modal.panel.classList.remove("hidden");
   $("#modal-root").classList.remove("hidden");
   modal.open = true;
+  modal.onCloseCb = onClose;
   if (mount) mount();
   $("#modal-close").focus();
 }
@@ -451,6 +464,11 @@ export function closeModal() {
   if (!modal.open) return;
   modal.open = false;
   $("#modal-root").classList.add("hidden");
+  if (modal.onCloseCb) {
+    const cb = modal.onCloseCb;
+    modal.onCloseCb = null;
+    cb();
+  }
   if (modal.lastFocus?.focus) modal.lastFocus.focus();
 }
 
@@ -712,6 +730,36 @@ function buildHelp() {
         <span class="info-value">The little note button, top right. Off by default, on by choice.</span></div>
     </div>`;
   return { title: "How to Play", icon: "heart", html };
+}
+
+/* ---------- modal: first-time onboarding ---------- */
+const WALK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h9M13 5l-3-2M13 5l-3 2"/><path d="M4 12h9M13 12l-3-2M13 12l-3 2"/><path d="M4 19h9M13 19l-3-2M13 19l-3 2"/><circle cx="19" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg>`;
+const SPEECH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4c-4.4 0-8 3.1-8 7 0 2.2 1.1 4.1 2.9 5.4L6 20l3.7-1.5c.7.2 1.5.3 2.3.3 4.4 0 8-3.1 8-7s-3.6-7.8-8-7.8z"/><path d="M9 10.2h6M9 13h3.6"/></svg>`;
+const PIN_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.5-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.5 12 21 12 21z"/><circle cx="12" cy="10.2" r="2.4"/></svg>`;
+
+function buildOnboard() {
+  const touch = isTouch();
+  const rows = touch
+    ? [
+        { icon: WALK_ICON, text: "<b>Walk:</b> drag the round joystick — or just tap the ground where you want to go." },
+        { icon: SPEECH_ICON, text: "<b>Read:</b> stand near a landmark and tap the gold <b>Read</b> button. Its story types itself out." },
+        { icon: PIN_ICON, text: "<b>Travel:</b> tap any place in the pack below and the couple strolls over. A ✓ means you've read it." },
+      ]
+    : [
+        { icon: WALK_ICON, text: "<b>Walk:</b> WASD or arrow keys — or simply click the ground where you want to go." },
+        { icon: SPEECH_ICON, text: "<b>Read:</b> stand near a landmark and press <b>Space</b>. Its story types itself out." },
+        { icon: PIN_ICON, text: "<b>Travel:</b> click any place in the pack below and the couple strolls over. A ✓ means you've read it." },
+      ];
+  const html = `
+    <p class="lead">Three things and you're a villager.</p>
+    <div class="how-list">
+      ${rows.map((r) => `<div class="how-row"><span class="how-ico">${r.icon}</span><p>${r.text}</p></div>`).join("")}
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn btn-gold" id="onboard-go">Let's go!</button>
+      <span class="form-note">You can reopen this anytime from the ? button.</span>
+    </div>`;
+  return { title: "How to Play", icon: "sign", html };
 }
 
 function escapeHTML(s) {
