@@ -11,7 +11,7 @@ import {
   buildHotbar, lightUpSlot, markSeen, updateHUD, toast, setHint,
   isTouch, updateActionButton, showHUD, openModal, setMusicButton,
 } from "./ui.js";
-import { initAudio, setMusic, musicEnabled, sfxPop, sfxDing, sfxWarp } from "./audio.js";
+import { initAudio, setMusic, musicEnabled, sfxPop, sfxDing, sfxTook, sfxWarp } from "./audio.js";
 
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -186,6 +186,8 @@ document.getElementById("btn-music").addEventListener("click", () => {
   initAudio();
   setMusic(!musicEnabled());
   setMusicButton(musicEnabled());
+  if (musicEnabled()) sfxDing();
+  else sfxTook();
 });
 document.getElementById("btn-help").addEventListener("click", () => {
   openModal("help");

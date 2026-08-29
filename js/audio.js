@@ -133,6 +133,45 @@ export function sfxBlip() {
   osc.stop(t + 0.06);
 }
 
+/* one letter of typewriter speech — pitch follows the speaker's "voice" */
+export function sfxTypeBlip(baseFreq) {
+  if (!sfxContext()) return;
+  const t = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const env = ctx.createGain();
+  osc.type = "square";
+  osc.frequency.value = baseFreq * (0.93 + Math.random() * 0.14);
+  env.gain.setValueAtTime(0.02, t);
+  env.gain.exponentialRampToValueAtTime(0.0001, t + 0.042);
+  osc.connect(env).connect(masterGain);
+  osc.start(t);
+  osc.stop(t + 0.05);
+}
+
+/* popup closes — small downward pop */
+export function sfxTook() {
+  if (!sfxContext()) return;
+  const t = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const env = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(330, t);
+  osc.frequency.exponentialRampToValueAtTime(190, t + 0.1);
+  env.gain.setValueAtTime(0.08, t);
+  env.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+  osc.connect(env).connect(masterGain);
+  osc.start(t);
+  osc.stop(t + 0.14);
+}
+
+/* gentle two-note ping for toasts */
+export function sfxPing() {
+  if (!sfxContext()) return;
+  const t = ctx.currentTime;
+  tone(987.8, t, 0.22, "sine", 0.06, masterGain);
+  tone(1318.5, t + 0.09, 0.3, "sine", 0.05, masterGain);
+}
+
 export function sfxDing() {
   if (!sfxContext()) return;
   const t = ctx.currentTime;

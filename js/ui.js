@@ -4,8 +4,12 @@
    ============================================================ */
 
 import { COUPLE, VENUE, STORY, GALLERY, WISHES_SEED, SPOTS, RSVP_ENDPOINT } from "./data.js";
+import { sfxPop, sfxTook, sfxPing, sfxDing, sfxTypeBlip } from "./audio.js";
 
 const $ = (sel) => document.querySelector(sel);
+
+/* each speaker "speaks" the typewriter at their own pitch */
+const VOICES = { nana: 980, raka: 660, sign: 830, chapel: 760, mailbox: 860, gallery: 800, wish: 900, clock: 720 };
 
 /* ============================================================
    ICONS — chunky stroke SVGs, one per spot
@@ -87,7 +91,7 @@ function setPortrait(who) {
 const dlg = {
   el: null, textEl: null, nextEl: null, choicesEl: null,
   pages: [], page: -1, action: null, onDone: null,
-  typing: false, typeTimer: null,
+  typing: false, typeTimer: null, voice: 820, charTick: 0,
 };
 
 function initDialogue() {
@@ -127,17 +131,27 @@ function nextPage() {
   }
   const page = dlg.pages[dlg.page];
   setPortrait(page.who);
+  dlg.voice = VOICES[page.who] || 820;
   typeText(page.text);
 }
 
 function typeText(text) {
   dlg.typing = true;
+  dlg.charTick = 0;
   clearInterval(dlg.typeTimer);
   const caret = '<span class="caret">▌</span>';
   let i = 0;
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   dlg.typeTimer = setInterval(() => {
     i += reduced ? text.length : 1;
+    // one soft blip per couple of letters, skipping spaces — the villager voice
+    if (!reduced) {
+      const ch = text[i - 1];
+      if (i % 2 === 0 && ch && ch !== " ") {
+        dlg.charTick++;
+        if (dlg.charTick % 24 !== 0) sfxTypeBlip(dlg.voice); // tiny breath every ~24 letters
+      }
+    }
     dlg.textEl.innerHTML = text.slice(0, i) + caret;
     if (i >= text.length) finishTyping(text);
   }, 22);
@@ -185,6 +199,7 @@ function showChoices() {
   go.textContent = dlg.action.label;
   go.addEventListener("click", (e) => {
     e.stopPropagation();
+    sfxDing();
     const a = dlg.action;
     closeDialog();
     openModal(a.modal);
@@ -195,6 +210,7 @@ function showChoices() {
   no.textContent = "Maybe later";
   no.addEventListener("click", (e) => {
     e.stopPropagation();
+    sfxTook();
     closeDialog();
   });
   c.append(go, no);
@@ -300,6 +316,7 @@ export function toast(msg) {
   const t = $("#toast");
   t.textContent = msg;
   t.classList.remove("hidden");
+  sfxPing();
   clearTimeout(toastTimer);
   // restart the CSS animation
   t.style.animation = "none";
@@ -442,6 +459,7 @@ export function isModalOpen() {
 
 export function openModal(kind, onClose = null) {
   modal.lastFocus = document.activeElement;
+  sfxPop();
   const builders = { info: buildInfo, story: buildStory, rsvp: buildRsvp, gallery: buildGallery, wish: buildWish, count: buildCount, help: buildHelp, onboard: buildOnboard };
   const build = builders[kind];
   if (!build) return;
@@ -459,6 +477,7 @@ export function openModal(kind, onClose = null) {
 export function closeModal() {
   if (!modal.open) return;
   modal.open = false;
+  sfxTook();
   $("#modal-root").classList.add("hidden");
   if (modal.onCloseCb) {
     const cb = modal.onCloseCb;
@@ -723,7 +742,7 @@ function buildHelp() {
       <div class="info-row"><span class="info-label">Pack</span>
         <span class="info-value">Every place is pinned to the hotbar — click one and the couple strolls there. A ✓ means you've already read it.</span></div>
       <div class="info-row"><span class="info-label">Music</span>
-        <span class="info-value">The little note button, top right. Off by default, on by choice.</span></div>
+        <span class="info-value">The little note button, top right — off by default, on by choice. The little letter-beeps and clicks stay on; they're part of the charm.</span></div>
     </div>`;
   return { title: "How to Play", icon: "heart", html };
 }
