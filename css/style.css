@@ -353,17 +353,29 @@ button { font: inherit; cursor: pointer; }
   opacity: 1;
   transform: translateX(-50%) scale(1);
 }
-.hot-slot.is-new::after {
-  content: "NEW";
+.hot-slot.seen::after {
+  content: "✓";
   position: absolute;
-  top: -10px; right: -10px;
-  background: var(--rose);
-  color: #fff;
-  font-family: var(--font-pixel);
-  font-size: 0.6rem;
-  padding: 2px 5px;
-  border-radius: 6px;
+  top: -9px;
+  right: -9px;
+  width: 18px;
+  height: 18px;
+  background: var(--gold);
+  color: #5b3a10;
   border: 2px solid var(--wood-darker);
+  border-radius: 50%;
+  font-family: var(--font-pixel);
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
+.hot-slot.is-new::after {
+  animation: badge-pop 0.4s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+@keyframes badge-pop {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
 }
 
 /* --- action hint --- */

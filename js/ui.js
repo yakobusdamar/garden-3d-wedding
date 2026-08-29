@@ -248,16 +248,10 @@ export function buildHotbar(onTravel) {
     b.type = "button";
     b.className = "hot-slot";
     b.dataset.id = spot.id;
-    b.setAttribute("aria-label", spot.label);
+    b.setAttribute("aria-label", `Stroll to the ${spot.label}`);
     b.innerHTML = ICONS[spot.id] + `<span class="slot-tip">${spot.label}</span>`;
     if (seenSpots.has(spot.id)) b.classList.add("seen");
-    b.addEventListener("click", () => {
-      if (!seenSpots.has(spot.id)) {
-        toast("Walk there first to pin it to your pack!");
-        return;
-      }
-      onTravel(spot);
-    });
+    b.addEventListener("click", () => onTravel(spot));
     bar.appendChild(b);
   }
 }
@@ -713,7 +707,7 @@ function buildHelp() {
           ? "Tap the round A button when something glows."
           : "Space, E, or Enter when you see the speech bubble."}</span></div>
       <div class="info-row"><span class="info-label">Pack</span>
-        <span class="info-value">Places you've visited are pinned to the hotbar — click to fast-travel.</span></div>
+        <span class="info-value">Every place is pinned to the hotbar — click one and the couple strolls there. A ✓ means you've already read it.</span></div>
       <div class="info-row"><span class="info-label">Music</span>
         <span class="info-value">The little note button, top right. Off by default, on by choice.</span></div>
     </div>`;

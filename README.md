@@ -24,7 +24,7 @@ Then open the printed URL (e.g. `http://localhost:8000`).
 | --- | --- | --- |
 | Walk | WASD / arrows, or click the ground | left joystick, or tap the ground |
 | Read / interact | Space, E, or Enter (also the on-screen hint) | round **A** button |
-| Visit a known place | click its slot in the hotbar — the couple strolls there and opens it | same |
+| Visit any place | click its slot in the hotbar — the couple strolls there and opens it (✓ = already read) | same |
 | Music | note button, top right | same |
 | Help | **?** button, top right | same |
 
