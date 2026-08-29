@@ -1,0 +1,719 @@
+/* ============================================================
+   world.js — the village of Petalbrook.
+   Everything procedural: no image files, no model downloads.
+   ============================================================ */
+
+import * as THREE from "three";
+
+const WORLD_SIZE = 64; // world spans -32..32 on x and z
+const PX = 1024 / WORLD_SIZE; // ground-canvas pixels per world unit
+
+/* ---------- palette (world side) ---------- */
+const C = {
+  sky: 0xaee2fb,
+  grassA: 0x7dbf63,
+  path: 0xd9b078,
+  pathEdge: 0xc09a5c,
+  wood: 0x9a6838,
+  woodLight: 0xb07a45,
+  cream: 0xf7f0dd,
+  roofRose: 0xe88ba4,
+  roofTerra: 0xc96f50,
+  stone: 0xe9e2d0,
+  water: 0x7cc7e8,
+  waterDeep: 0x5aa9cf,
+  leaf1: 0x6fae59,
+  leaf2: 0x86c96c,
+  leafAutumn: 0xd9a75a,
+  trunk: 0x8a5a34,
+  gold: 0xf5c84c,
+  rose: 0xe97fa2,
+  white: 0xfffaf0,
+};
+
+/* ---------- small helpers ---------- */
+const lam = (color, opts = {}) =>
+  new THREE.MeshLambertMaterial({ color, ...opts });
+
+function mesh(geo, mat, x = 0, y = 0, z = 0, rot = 0) {
+  const m = new THREE.Mesh(geo, mat);
+  m.position.set(x, y, z);
+  if (rot) m.rotation.y = rot;
+  m.castShadow = true;
+  m.receiveShadow = true;
+  return m;
+}
+
+/* triangular prism = gable roof */
+function prismRoof(width, height, depth) {
+  const shape = new THREE.Shape();
+  shape.moveTo(-width / 2, 0);
+  shape.lineTo(width / 2, 0);
+  shape.lineTo(0, height);
+  shape.closePath();
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth,
+    bevelEnabled: false,
+  });
+  geo.translate(0, 0, -depth / 2);
+  return geo;
+}
+
+function tree(x, z, scale = 1, leafColor = C.leaf1) {
+  const g = new THREE.Group();
+  const trunkH = 1.5 * scale;
+  g.add(
+    mesh(
+      new THREE.CylinderGeometry(0.22 * scale, 0.3 * scale, trunkH, 6),
+      lam(C.trunk),
+      0,
+      trunkH / 2,
+      0
+    )
+  );
+  const blob = (r, dx, dy, dz) =>
+    mesh(
+      new THREE.IcosahedronGeometry(r, 0),
+      lam(leafColor, { flatShading: true }),
+      dx,
+      trunkH + dy,
+      dz
+    );
+  g.add(blob(1.05 * scale, 0, 0.55 * scale, 0));
+  g.add(blob(0.75 * scale, 0.55 * scale, 0.05 * scale, 0.25 * scale));
+  g.add(blob(0.7 * scale, -0.5 * scale, 0.1 * scale, -0.3 * scale));
+  g.position.set(x, 0, z);
+  g.rotation.y = Math.random() * Math.PI;
+  return g;
+}
+
+function flowerInstanced(count) {
+  const stemGeo = new THREE.CylinderGeometry(0.03, 0.035, 0.42, 4);
+  stemGeo.translate(0, 0.21, 0);
+  const headGeo = new THREE.IcosahedronGeometry(0.14, 0);
+  headGeo.translate(0, 0.5, 0);
+  const stems = new THREE.InstancedMesh(stemGeo, lam(0x5c9a4a), count);
+  const heads = new THREE.InstancedMesh(headGeo, lam(0xffffff), count);
+  const colors = [new THREE.Color(C.rose), new THREE.Color(C.gold), new THREE.Color(C.white), new THREE.Color(0xc9a7e8)];
+  const dummy = new THREE.Object3D();
+  // scatter inside the village but off the paths
+  const beds = [
+    [-12, -5.5], [12, -3.5], [-13.5, 8], [11.5, 10], [0, 2],
+    [-6, 14], [7, 12], [-4, -14], [4, -12], [16, 2], [-18, -2],
+  ];
+  let placed = 0;
+  for (let i = 0; i < count; i++) {
+    const bed = beds[i % beds.length];
+    const a = Math.random() * Math.PI * 2;
+    const r = 0.6 + Math.random() * 2.6;
+    const x = bed[0] + Math.cos(a) * r;
+    const z = bed[1] + Math.sin(a) * r;
+    dummy.position.set(x, 0, z);
+    dummy.rotation.y = Math.random() * Math.PI;
+    dummy.scale.setScalar(0.8 + Math.random() * 0.6);
+    dummy.updateMatrix();
+    stems.setMatrixAt(i, dummy.matrix);
+    heads.setMatrixAt(i, dummy.matrix);
+    heads.setColorAt(i, colors[i % colors.length]);
+    placed++;
+  }
+  stems.count = placed;
+  heads.count = placed;
+  stems.castShadow = heads.castShadow = true;
+  return [stems, heads];
+}
+
+function fenceLine(x1, z1, x2, z2) {
+  const g = new THREE.Group();
+  const dx = x2 - x1, dz = z2 - z1;
+  const len = Math.hypot(dx, dz);
+  const posts = Math.max(2, Math.round(len / 1.4));
+  const postGeo = new THREE.BoxGeometry(0.14, 0.85, 0.14);
+  const railGeo = new THREE.BoxGeometry(len, 0.09, 0.07);
+  for (let i = 0; i <= posts; i++) {
+    const t = i / posts;
+    g.add(mesh(postGeo, lam(C.woodLight), x1 + dx * t, 0.42, z1 + dz * t));
+  }
+  for (const h of [0.35, 0.62]) {
+    const r = mesh(railGeo, lam(C.wood), (x1 + x2) / 2, h, (z1 + z2) / 2);
+    r.rotation.y = -Math.atan2(dz, dx);
+    g.add(r);
+  }
+  return g;
+}
+
+/* ---------- ground texture (paths, grass, pond sand) ---------- */
+function groundTexture() {
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 1024;
+  const g = cv.getContext("2d");
+  const px = (x) => (x + WORLD_SIZE / 2) * PX;
+  const pz = (z) => (WORLD_SIZE / 2 - z) * PX;
+
+  g.fillStyle = "#7dbf63";
+  g.fillRect(0, 0, 1024, 1024);
+
+  // grass tone blotches
+  for (let i = 0; i < 260; i++) {
+    g.fillStyle = Math.random() > 0.5 ? "rgba(134,201,108,0.5)" : "rgba(110,180,88,0.45)";
+    const r = 14 + Math.random() * 60;
+    g.beginPath();
+    g.ellipse(Math.random() * 1024, Math.random() * 1024, r, r * 0.55, Math.random() * 3, 0, 7);
+    g.fill();
+  }
+
+  // pond sand ring
+  g.fillStyle = "#e5cf9a";
+  g.beginPath();
+  g.arc(px(-8), pz(18), 4.6 * PX, 0, 7);
+  g.fill();
+
+  // paths (canvas styles need CSS strings — numeric hex is silently ignored)
+  const stroke = (pts, width) => {
+    g.strokeStyle = "#c09a5c";
+    g.lineWidth = width + 7;
+    g.lineCap = g.lineJoin = "round";
+    g.beginPath();
+    g.moveTo(px(pts[0][0]), pz(pts[0][1]));
+    for (const p of pts.slice(1)) g.lineTo(px(p[0]), pz(p[1]));
+    g.stroke();
+    g.strokeStyle = "#d9b078";
+    g.lineWidth = width;
+    g.stroke();
+  };
+  stroke([[0, 22], [0, 12], [0, 2]], 26); // spawn to plaza
+  stroke([[0, 2], [-4, -2], [-12, -6]], 24); // to chapel
+  stroke([[0, 2], [5, -1], [12, -4]], 24); // to farmhouse
+  stroke([[0, 2], [0, -8], [0, -11.4]], 22); // to clock tower
+  stroke([[0, 8], [-6, 8], [-12.6, 8]], 20); // to wishing tree
+  stroke([[0, 8], [6, 9], [11.4, 10]], 20); // to photo bench
+  stroke([[0, 16], [1.6, 17], [3.2, 17]], 14); // mailbox spur
+  g.fillStyle = "#d9b078";
+  g.beginPath(); g.arc(px(0), pz(2), 2.6 * PX, 0, 7); g.fill();
+  g.beginPath(); g.arc(px(0), pz(21.4), 1.8 * PX, 0, 7); g.fill();
+
+  // speckles: tiny grass blades
+  g.strokeStyle = "rgba(70,130,55,0.5)";
+  g.lineWidth = 1.5;
+  for (let i = 0; i < 900; i++) {
+    const x = Math.random() * 1024, y = Math.random() * 1024;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.lineTo(x + (Math.random() - 0.5) * 5, y - 4 - Math.random() * 5);
+    g.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+/* ---------- buildings ---------- */
+function buildChapel() {
+  const g = new THREE.Group();
+  // body
+  g.add(mesh(new THREE.BoxGeometry(6, 3.6, 5), lam(C.cream), 0, 1.8, 0));
+  // gable roof
+  const roof = mesh(prismRoof(6.6, 2.2, 5.6), lam(C.roofRose));
+  roof.position.y = 3.6;
+  g.add(roof);
+  // tower + spire
+  g.add(mesh(new THREE.BoxGeometry(1.6, 5.2, 1.6), lam(C.cream), 0, 2.6, -2.6));
+  g.add(mesh(new THREE.ConeGeometry(1.3, 1.9, 4), lam(C.roofRose), 0, 6.15, -2.6, Math.PI / 4));
+  g.add(mesh(new THREE.SphereGeometry(0.16, 8, 8), lam(C.gold), 0, 7.25, -2.6));
+  // door (wood, arched top)
+  g.add(mesh(new THREE.BoxGeometry(1.3, 1.9, 0.16), lam(C.woodLight), 0, 0.95, 2.55));
+  const arch = mesh(new THREE.CircleGeometry(0.65, 16, 0, Math.PI), lam(C.woodLight), 0, 1.9, 2.56);
+  g.add(arch);
+  // windows (gold glass)
+  for (const wx of [-2, 2]) {
+    g.add(mesh(new THREE.BoxGeometry(0.8, 1.1, 0.14), lam(C.gold), wx, 1.9, 2.53));
+    g.add(mesh(new THREE.BoxGeometry(0.14, 1.1, 0.16), lam(C.cream), wx, 1.9, 2.54));
+    g.add(mesh(new THREE.BoxGeometry(0.8, 0.14, 0.16), lam(C.cream), wx, 1.9, 2.54));
+  }
+  // rose window on tower
+  g.add(mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.1, 16), lam(C.rose), 0, 4.4, -1.76).rotateX(Math.PI / 2));
+  // flower arch in front of the door
+  const archTorus = mesh(new THREE.TorusGeometry(1.5, 0.12, 6, 24, Math.PI), lam(0x5c9a4a), 0, 0, 3.4);
+  g.add(archTorus);
+  const bloomSpots = [-1.4, -0.9, -0.4, 0.4, 0.9, 1.4];
+  bloomSpots.forEach((bx, i) => {
+    const t = Math.acos(-bx / 1.5);
+    const by = Math.sin(t) * 1.5;
+    g.add(mesh(new THREE.IcosahedronGeometry(0.16, 0), lam(i % 2 ? C.rose : C.white, { flatShading: true }), bx, by, 3.4));
+  });
+  // side hedges
+  for (const hx of [-3.4, 3.4]) {
+    g.add(mesh(new THREE.BoxGeometry(0.7, 0.7, 4.4), lam(0x5c9a4a), hx, 0.35, 0));
+  }
+  return g;
+}
+
+function buildFarmhouse() {
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.BoxGeometry(5.4, 3, 4.4), lam(0xf2e6c8), 0, 1.5, 0));
+  const roof = mesh(prismRoof(5.9, 2.1, 5), lam(C.roofTerra));
+  roof.position.y = 3;
+  g.add(roof);
+  // chimney
+  g.add(mesh(new THREE.BoxGeometry(0.55, 1.6, 0.55), lam(0xb8a99a), 1.6, 4.1, -0.8));
+  // door + windows
+  g.add(mesh(new THREE.BoxGeometry(1.15, 1.75, 0.14), lam(C.woodLight), 0.6, 0.87, 2.24));
+  g.add(mesh(new THREE.SphereGeometry(0.07, 6, 6), lam(C.gold), 0.95, 0.9, 2.33));
+  for (const wx of [-1.7, 2.2]) {
+    g.add(mesh(new THREE.BoxGeometry(0.9, 0.9, 0.14), lam(0x9fd4ec), wx, 1.7, 2.24));
+    g.add(mesh(new THREE.BoxGeometry(1.02, 0.1, 0.16), lam(C.woodLight), wx, 1.7, 2.24));
+    g.add(mesh(new THREE.BoxGeometry(0.1, 1.02, 0.16), lam(C.woodLight), wx, 1.7, 2.24));
+    // flower box
+    g.add(mesh(new THREE.BoxGeometry(1, 0.22, 0.3), lam(C.wood), wx, 1.1, 2.3));
+    g.add(mesh(new THREE.IcosahedronGeometry(0.13, 0), lam(C.rose, { flatShading: true }), wx - 0.25, 1.28, 2.3));
+    g.add(mesh(new THREE.IcosahedronGeometry(0.13, 0), lam(C.gold, { flatShading: true }), wx + 0.25, 1.28, 2.3));
+  }
+  // porch step
+  g.add(mesh(new THREE.BoxGeometry(1.7, 0.22, 0.9), lam(C.stone), 0.6, 0.11, 2.8));
+  return g;
+}
+
+function clockFaceTexture() {
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 256;
+  const g = cv.getContext("2d");
+  g.fillStyle = "#fffaf0";
+  g.beginPath(); g.arc(128, 128, 120, 0, 7); g.fill();
+  g.strokeStyle = "#b07a45"; g.lineWidth = 14;
+  g.stroke();
+  g.strokeStyle = "#4a3222";
+  g.lineWidth = 8; g.lineCap = "round";
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    g.beginPath();
+    g.moveTo(128 + Math.cos(a) * 92, 128 + Math.sin(a) * 92);
+    g.lineTo(128 + Math.cos(a) * 104, 128 + Math.sin(a) * 104);
+    g.stroke();
+  }
+  // hands at 9:00 — the ceremony hour
+  g.lineWidth = 12;
+  g.beginPath(); g.moveTo(128, 128); g.lineTo(128 - 62, 128); g.stroke();
+  g.lineWidth = 9;
+  g.beginPath(); g.moveTo(128, 128); g.lineTo(128, 128 - 78); g.stroke();
+  g.fillStyle = "#e97fa2";
+  g.beginPath(); g.arc(128, 128, 10, 0, 7); g.fill();
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function buildClockTower() {
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.BoxGeometry(3, 7.2, 3), lam(C.stone), 0, 3.6, 0));
+  const roof = mesh(prismRoof(3.5, 1.6, 3.5), lam(C.roofRose));
+  roof.position.y = 7.2;
+  g.add(roof);
+  g.add(mesh(new THREE.SphereGeometry(0.14, 8, 8), lam(C.gold), 0, 9.1, 0));
+  const face = new THREE.Mesh(
+    new THREE.CircleGeometry(1, 24),
+    new THREE.MeshBasicMaterial({ map: clockFaceTexture() })
+  );
+  face.position.set(0, 5.6, 1.56);
+  g.add(face);
+  // corner trims — sit proud of the wall (coplanar faces z-fight/blink)
+  for (const [cx, cz] of [[-1.32, 1.32], [1.32, 1.32], [-1.32, -1.32], [1.32, -1.32]]) {
+    g.add(mesh(new THREE.BoxGeometry(0.44, 7.4, 0.44), lam(C.woodLight), cx, 3.6, cz));
+  }
+  return g;
+}
+
+function buildMailbox() {
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.BoxGeometry(0.16, 1.1, 0.16), lam(C.wood), 0, 0.55, 0));
+  const box = mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.85, 12, 1, false, 0, Math.PI), lam(C.roofRose));
+  box.rotation.z = Math.PI / 2;
+  box.rotation.y = Math.PI / 2;
+  box.position.set(0, 1.25, 0);
+  g.add(box);
+  g.add(mesh(new THREE.BoxGeometry(0.85, 0.02, 0.64), lam(C.rose), 0, 1.25, 0));
+  // little flag
+  g.add(mesh(new THREE.BoxGeometry(0.05, 0.4, 0.24), lam(C.gold), 0.42, 1.55, 0));
+  return g;
+}
+
+function buildWishingTree() {
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.CylinderGeometry(0.5, 0.72, 3.4, 7), lam(C.trunk), 0, 1.7, 0));
+  const canopy = [
+    [2.1, 0, 2.6, 0],
+    [1.5, 1.3, 3.6, 0.5],
+    [1.4, -1.2, 3.4, -0.4],
+    [1.2, 0.2, 4.3, 1.0],
+  ].map(([r, dx, dy, dz]) =>
+    mesh(new THREE.IcosahedronGeometry(r, 1), lam(C.leaf2, { flatShading: true }), dx, dy, dz)
+  );
+  canopy.forEach((c) => g.add(c));
+  // hanging paper wishes
+  const tagGeo = new THREE.PlaneGeometry(0.34, 0.22);
+  const tagMat = lam(0xfdf3dc, { side: THREE.DoubleSide });
+  g.userData.tags = [];
+  for (let i = 0; i < 9; i++) {
+    const tag = new THREE.Mesh(tagGeo, tagMat);
+    const a = Math.random() * Math.PI * 2;
+    const r = 0.8 + Math.random() * 1.6;
+    tag.position.set(Math.cos(a) * r, 2.1 + Math.random() * 1.5, Math.sin(a) * r);
+    tag.rotation.y = Math.random() * Math.PI;
+    g.add(tag);
+    g.userData.tags.push(tag);
+  }
+  // little sign at base
+  g.add(mesh(new THREE.BoxGeometry(0.1, 0.9, 0.1), lam(C.wood), 1.1, 0.45, 0.4));
+  const plate = mesh(new THREE.BoxGeometry(0.9, 0.5, 0.07), lam(C.woodLight), 1.1, 1.05, 0.4);
+  g.add(plate);
+  const heart = mesh(new THREE.IcosahedronGeometry(0.11, 0), lam(C.rose, { flatShading: true }), 1.1, 1.08, 0.46);
+  g.add(heart);
+  return g;
+}
+
+function polaroidTexture(caption, tint) {
+  const cv = document.createElement("canvas");
+  cv.width = 128; cv.height = 128;
+  const g = cv.getContext("2d");
+  g.fillStyle = tint;
+  g.fillRect(0, 0, 128, 128);
+  // sun
+  g.fillStyle = "rgba(255,255,255,0.75)";
+  g.beginPath(); g.arc(96, 32, 16, 0, 7); g.fill();
+  // hills
+  g.fillStyle = "rgba(111,174,89,0.85)";
+  g.beginPath(); g.ellipse(40, 110, 46, 26, 0, 0, 7); g.fill();
+  g.beginPath(); g.ellipse(96, 116, 42, 22, 0, 0, 7); g.fill();
+  // two little figures + heart
+  g.fillStyle = "#4a3222";
+  g.beginPath(); g.arc(52, 84, 8, 0, 7); g.fill();
+  g.fillRect(44, 88, 16, 22);
+  g.beginPath(); g.arc(76, 86, 8, 0, 7); g.fill();
+  g.fillRect(68, 90, 16, 20);
+  g.fillStyle = "#e97fa2";
+  g.font = "22px sans-serif";
+  g.fillText("♥", 60, 62);
+  g.fillStyle = "#4a3222";
+  g.font = "italic 12px serif";
+  g.textAlign = "center";
+  g.fillText(caption, 64, 122);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function buildPhotoBench() {
+  const g = new THREE.Group();
+  // bench
+  g.add(mesh(new THREE.BoxGeometry(2.2, 0.14, 0.7), lam(C.woodLight), 0, 0.55, 0));
+  for (const lx of [-0.9, 0.9]) {
+    g.add(mesh(new THREE.BoxGeometry(0.16, 0.55, 0.6), lam(C.wood), lx, 0.27, 0));
+  }
+  g.add(mesh(new THREE.BoxGeometry(2.2, 0.5, 0.12), lam(C.wood), 0, 0.95, -0.3));
+  // easel with polaroid
+  const leg = (rz) => {
+    const l = mesh(new THREE.BoxGeometry(0.08, 1.7, 0.08), lam(C.wood), 0, 0.85, 0.35);
+    l.rotation.x = rz;
+    return l;
+  };
+  g.add(leg(0.16));
+  const l2 = leg(-0.16); l2.position.x = -0.3; g.add(l2);
+  const l3 = leg(-0.16); l3.position.x = 0.3; g.add(l3);
+  const canvas = mesh(
+    new THREE.BoxGeometry(1.1, 1.1, 0.06),
+    new THREE.MeshLambertMaterial({ map: polaroidTexture("our bench", "#f9c6cf") }),
+    0, 1.55, 0.25
+  );
+  canvas.rotation.x = -0.08;
+  g.add(canvas);
+  return g;
+}
+
+/* ---------- "!" speech bubble markers ---------- */
+function buildMarker() {
+  const g = new THREE.Group();
+  const bubble = mesh(new THREE.SphereGeometry(0.42, 12, 10), lam(C.white));
+  bubble.castShadow = false;
+  bubble.scale.set(1, 0.82, 1);
+  g.add(bubble);
+  // exclamation mark
+  const bar = mesh(new THREE.BoxGeometry(0.11, 0.3, 0.06), lam(C.rose), 0, 0.06, 0.4);
+  bar.castShadow = false;
+  const dot = mesh(new THREE.SphereGeometry(0.06, 6, 6), lam(C.rose), 0, -0.19, 0.4);
+  dot.castShadow = false;
+  g.add(bar, dot);
+  // little tail
+  const tail = mesh(new THREE.ConeGeometry(0.12, 0.22, 4), lam(C.white), 0, -0.42, 0);
+  tail.rotation.x = Math.PI;
+  tail.castShadow = false;
+  g.add(tail);
+  return g;
+}
+
+/* ============================================================
+   MAIN BUILDER
+   ============================================================ */
+export function createWorld(scene) {
+  const colliders = []; // {x, z, r}
+  const markers = new Map(); // spot id -> marker group
+  const anim = { tags: [], butterflies: [], petals: null, clouds: [] };
+  const addCollider = (x, z, r) => colliders.push({ x, z, r });
+
+  /* lights & sky */
+  scene.background = new THREE.Color(C.sky);
+  scene.fog = new THREE.FogExp2(0xb8dff2, 0.014);
+  scene.add(new THREE.HemisphereLight(0xcdeaff, 0xa8cf8e, 0.85));
+  const sun = new THREE.DirectionalLight(0xfff2d0, 1.35);
+  sun.position.set(18, 28, 12);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left = -26;
+  sun.shadow.camera.right = 26;
+  sun.shadow.camera.top = 26;
+  sun.shadow.camera.bottom = -26;
+  sun.shadow.camera.far = 80;
+  sun.shadow.bias = -0.0004;
+  sun.shadow.normalBias = 0.03;
+  sun.shadow.camera.updateProjectionMatrix();
+  scene.add(sun);
+
+  /* ground */
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE),
+    new THREE.MeshLambertMaterial({ map: groundTexture() })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  /* pond (south-west) */
+  const pond = new THREE.Mesh(
+    new THREE.CircleGeometry(3.6, 26),
+    new THREE.MeshLambertMaterial({ color: C.water })
+  );
+  pond.rotation.x = -Math.PI / 2;
+  pond.position.set(-8, 0.02, 18);
+  scene.add(pond);
+  const deep = new THREE.Mesh(
+    new THREE.CircleGeometry(2.2, 20),
+    new THREE.MeshLambertMaterial({ color: C.waterDeep })
+  );
+  deep.rotation.x = -Math.PI / 2;
+  deep.position.set(-8.4, 0.03, 18.4);
+  scene.add(deep);
+  for (let i = 0; i < 5; i++) {
+    const pad = mesh(new THREE.CircleGeometry(0.28 + Math.random() * 0.2, 7), lam(0x5c9a4a), -8 + (Math.random() - 0.5) * 4, 0.05, 18 + (Math.random() - 0.5) * 4);
+    pad.rotation.x = -Math.PI / 2;
+    pad.castShadow = false;
+    scene.add(pad);
+  }
+  addCollider(-8, 18, 4.4);
+
+  /* buildings at data.js coordinates */
+  const chapel = buildChapel();
+  chapel.position.set(-12, 0, -10);
+  chapel.rotation.y = Math.PI * 0.12;
+  scene.add(chapel);
+  addCollider(-12, -10, 3.6);
+
+  const house = buildFarmhouse();
+  house.position.set(12, 0, -8);
+  house.rotation.y = -Math.PI * 0.14;
+  scene.add(house);
+  addCollider(12, -8, 3.2);
+
+  const tower = buildClockTower();
+  tower.position.set(0, 0, -15);
+  scene.add(tower);
+  addCollider(0, -15, 2.2);
+
+  const mailbox = buildMailbox();
+  mailbox.position.set(3.2, 0, 17);
+  mailbox.rotation.y = Math.PI * 0.75;
+  scene.add(mailbox);
+  addCollider(3.2, 17, 0.5);
+
+  const wishingTree = buildWishingTree();
+  wishingTree.position.set(-16, 0, 8);
+  scene.add(wishingTree);
+  addCollider(-16, 8, 1.5);
+  anim.tags = wishingTree.userData.tags;
+
+  const bench = buildPhotoBench();
+  bench.position.set(14, 0, 10);
+  bench.rotation.y = -Math.PI * 0.3;
+  scene.add(bench);
+  addCollider(14, 10, 1.2);
+
+  /* welcome sign near spawn */
+  const sign = new THREE.Group();
+  sign.add(mesh(new THREE.BoxGeometry(0.14, 1.5, 0.14), lam(C.wood), 0, 0.75, 0));
+  const board = mesh(new THREE.BoxGeometry(1.7, 0.8, 0.1), lam(C.woodLight), 0, 1.5, 0);
+  sign.add(board);
+  sign.add(mesh(new THREE.IcosahedronGeometry(0.13, 0), lam(C.rose, { flatShading: true }), 0.45, 1.62, 0.08));
+  sign.add(mesh(new THREE.IcosahedronGeometry(0.1, 0), lam(C.gold, { flatShading: true }), -0.4, 1.45, 0.08));
+  sign.position.set(-1.6, 0, 21);
+  sign.rotation.y = 0.4;
+  scene.add(sign);
+  addCollider(-1.6, 21, 0.5);
+
+  /* trees around the edge + sprinkled inside */
+  const treeSpots = [
+    [-24, -18, 1.4, C.leaf1], [-19, -24, 1.2, C.leafAutumn], [-6, -24, 1.3, C.leaf1],
+    [7, -24, 1.1, C.leaf2], [19, -20, 1.4, C.leafAutumn], [25, -12, 1.2, C.leaf1],
+    [26, 2, 1.3, C.leaf2], [24, 14, 1.4, C.leaf1], [18, 22, 1.2, C.leafAutumn],
+    [8, 26, 1.3, C.leaf1], [-4, 26, 1.1, C.leaf2], [-14, 25, 1.4, C.leaf1],
+    [-24, 18, 1.3, C.leafAutumn], [-26, 6, 1.2, C.leaf1], [-26, -6, 1.3, C.leaf2],
+    [-7, -20, 0.9, C.leaf2], [16, 4, 0.9, C.leaf1], [-19, -2, 1.0, C.leaf2],
+  ];
+  for (const [x, z, s, c] of treeSpots) {
+    scene.add(tree(x, z, s, c));
+    addCollider(x, z, 0.55 * s + 0.3);
+  }
+
+  /* fences framing the world */
+  const F = 27;
+  scene.add(fenceLine(-F, -F, F, -F));
+  scene.add(fenceLine(-F, F, F, F));
+  scene.add(fenceLine(-F, -F, -F, F));
+  scene.add(fenceLine(F, -F, F, F));
+  // chapel garden fence
+  scene.add(fenceLine(-17, -5, -7, -5));
+  // farmhouse yard fence
+  scene.add(fenceLine(7, -2, 17, -2));
+
+  /* flowers */
+  const [stems, heads] = flowerInstanced(140);
+  scene.add(stems, heads);
+
+  /* clouds */
+  const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+  for (let i = 0; i < 5; i++) {
+    const cloud = new THREE.Group();
+    const puffs = 3 + Math.floor(Math.random() * 3);
+    for (let p = 0; p < puffs; p++) {
+      const s = 1.2 + Math.random() * 1.6;
+      const puff = mesh(new THREE.SphereGeometry(s, 7, 6), cloudMat, p * s * 1.1, Math.random() * 0.4, Math.random() * s);
+      puff.castShadow = false;
+      puff.receiveShadow = false;
+      cloud.add(puff);
+    }
+    cloud.position.set(-30 + Math.random() * 60, 16 + Math.random() * 6, -24 + Math.random() * 48);
+    cloud.userData.speed = 0.25 + Math.random() * 0.35;
+    anim.clouds.push(cloud);
+    scene.add(cloud);
+  }
+
+  /* falling petals — soft round sprites */
+  const petalCv = document.createElement("canvas");
+  petalCv.width = petalCv.height = 32;
+  const pg = petalCv.getContext("2d");
+  const grad = pg.createRadialGradient(16, 16, 2, 16, 16, 15);
+  grad.addColorStop(0, "rgba(255,255,255,1)");
+  grad.addColorStop(0.6, "rgba(252,205,222,0.95)");
+  grad.addColorStop(1, "rgba(252,205,222,0)");
+  pg.fillStyle = grad;
+  pg.beginPath(); pg.arc(16, 16, 15, 0, 7); pg.fill();
+  const petalTex = new THREE.CanvasTexture(petalCv);
+
+  const PETALS = 170;
+  const positions = new Float32Array(PETALS * 3);
+  const seeds = new Float32Array(PETALS);
+  for (let i = 0; i < PETALS; i++) {
+    positions[i * 3] = (Math.random() - 0.5) * 60;
+    positions[i * 3 + 1] = Math.random() * 14;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * 60;
+    seeds[i] = Math.random() * 100;
+  }
+  const petalGeo = new THREE.BufferGeometry();
+  petalGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  const petalMat = new THREE.PointsMaterial({
+    size: 0.22,
+    map: petalTex,
+    transparent: true,
+    depthWrite: false,
+    color: 0xffc9dc,
+    sizeAttenuation: true,
+  });
+  const petals = new THREE.Points(petalGeo, petalMat);
+  anim.petals = { points: petals, seeds };
+  scene.add(petals);
+
+  /* butterflies */
+  const wingGeo = new THREE.PlaneGeometry(0.22, 0.3);
+  const wingMats = [lam(0xf5c84c, { side: THREE.DoubleSide }), lam(0xe97fa2, { side: THREE.DoubleSide }), lam(0xffffff, { side: THREE.DoubleSide })];
+  for (let i = 0; i < 6; i++) {
+    const bf = new THREE.Group();
+    const wl = new THREE.Mesh(wingGeo, wingMats[i % 3]);
+    const wr = new THREE.Mesh(wingGeo, wingMats[i % 3]);
+    wl.position.x = -0.1; wr.position.x = 0.1;
+    bf.add(wl, wr);
+    const home = [[-12, -5], [12, -3], [-13, 8], [11, 10], [0, 2], [-8, 18]][i];
+    bf.userData = {
+      wl, wr,
+      home,
+      phase: Math.random() * 100,
+      speed: 0.5 + Math.random() * 0.4,
+      flap: 8 + Math.random() * 4,
+    };
+    anim.butterflies.push(bf);
+    scene.add(bf);
+  }
+
+  /* interaction markers above each spot */
+  const MARKER_Y = { chapel: 8.4, house: 5.4, clock: 10.2, mailbox: 2.4, gallery: 3.4, wish: 6.2, sign: 2.6 };
+  for (const id of Object.keys(MARKER_Y)) {
+    const m = buildMarker();
+    m.visible = false;
+    m.userData.baseY = MARKER_Y[id];
+    markers.set(id, m);
+    scene.add(m);
+  }
+
+  /* ---------- per-frame world life ---------- */
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function update(dt, t, playerPos, camera) {
+    // petals fall & sway
+    if (anim.petals && !reduced) {
+      const pos = anim.petals.points.geometry.attributes.position;
+      for (let i = 0; i < PETALS; i++) {
+        let y = pos.getY(i) - dt * 0.55;
+        if (y < 0.1) y = 12 + Math.random() * 3;
+        pos.setY(i, y);
+        pos.setX(i, pos.getX(i) + Math.sin(t * 0.9 + anim.petals.seeds[i]) * dt * 0.35);
+      }
+      pos.needsUpdate = true;
+    }
+    // butterflies wander
+    for (const bf of anim.butterflies) {
+      const { home, phase, speed, flap } = bf.userData;
+      const s = t * speed + phase;
+      bf.position.set(
+        home[0] + Math.cos(s * 0.9) * 2.4,
+        1.1 + Math.sin(s * 1.7) * 0.45,
+        home[1] + Math.sin(s * 1.3) * 2.4
+      );
+      bf.rotation.y = -s * 0.9;
+      bf.userData.wl.rotation.y = Math.sin(s * flap) * 0.9;
+      bf.userData.wr.rotation.y = -Math.sin(s * flap) * 0.9;
+    }
+    // clouds drift
+    for (const cl of anim.clouds) {
+      cl.position.x += cl.userData.speed * dt;
+      if (cl.position.x > 36) cl.position.x = -36;
+    }
+    // wishing tags sway
+    for (const tag of anim.tags) {
+      tag.rotation.x = Math.sin(t * 1.4 + tag.position.x * 3) * 0.25;
+    }
+    // markers bob & face camera
+    for (const [, m] of markers) {
+      if (!m.visible) continue;
+      m.position.y = m.userData.baseY + Math.sin(t * 2.6) * 0.14;
+      m.rotation.y = Math.atan2(camera.position.x - m.position.x, camera.position.z - m.position.z);
+    }
+  }
+
+  return { colliders, markers, update, sun };
+}
