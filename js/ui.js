@@ -337,10 +337,6 @@ export function isTouch() {
   return matchMedia("(pointer: coarse)").matches;
 }
 
-export function setActPulse(on) {
-  $("#btn-act").classList.toggle("pulse", on && !dialogueActive());
-}
-
 export function showHUD(show) {
   $("#hud").classList.toggle("hidden", !show);
   $("#hud").setAttribute("aria-hidden", String(!show));

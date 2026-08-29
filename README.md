@@ -65,6 +65,8 @@ over the drawn keepsake.
 
 ## Notes
 
+- First visit opens a short "How to Play" card; guests can reopen it anytime
+  from the ? button.
 - `?touch=1` forces the mobile controls (handy for previewing on desktop).
 - Reduced-motion preference is respected: petals calm down and camera sway stops.
 - The Three.js module loads from jsDelivr, so guests need internet the first

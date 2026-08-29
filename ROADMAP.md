@@ -54,21 +54,26 @@ respectful for the venue (e.g. headscarf available/required at a mosque).
 
 ## 4. Near-term UX fixes / quick wins — noted 2026-08-29
 
-- [ ] **Prevent double-tap zoom on touch devices.** With the viewport meta alone
-  iOS can still zoom the page UI on double-tap. Add `touch-action: manipulation`
-  to `body`, `.btn`, `.hot-slot`, `#dialogue`, and modal elements (canvas already
-  has `touch-action: none`). Optionally `preventDefault` on `gesturestart` for iOS.
+- [x] **Prevent double-tap zoom on touch devices.** Done: `touch-action: manipulation`
+  on body + all UI elements (canvas keeps `touch-action: none`).
 - [ ] **Slightly bigger farmhouse hitbox.** Collider is `r: 3.2` in `world.js`
-  (`addCollider(12, -8, 3.2)`); bump to ~3.5. Constraint to keep: each spot's
-  `stop` (halt distance) must stay between `collider.r + 0.45` and `spot.r`,
-  so bump farmhouse `stop` to ~4.0 and `r` to ~4.1 in `data.js`.
+  (`addCollider(9, -6, 3.2)` after the compaction); bump to ~3.5. Constraint to
+  keep: each spot's `stop` (halt distance) must stay between `collider.r + 0.45`
+  and `spot.r`, so bump farmhouse `stop` to ~4.0 and `r` to ~4.1 in `data.js`.
 - [ ] **Auto-open dialogue on touching a landmark.** When the couple enters a
   spot's radius, open its dialog automatically (no key press). Edge cases:
   don't re-trigger right after "Maybe later" — only re-arm after the player
   exits the radius again; never open while a modal/other dialog is active.
-- [ ] **Permanent floating landmark labels.** Every landmark gets a small
-  floating name sign (canvas-texture sprite or projected HTML label) visible
-  from afar, fading by distance; the "!" bubble stays as the interaction cue.
+- [x] **Permanent floating landmark labels.** Done: every landmark shows a wooden
+  name plate (canvas sprite, Pixelify Sans, distance fade, goes shy up close).
+  Rendered from `SPOTS[].menu`; redrawn once web fonts load.
+
+Also done in the same pass: first-run onboarding card (`onboard` modal, flag
+`pb_onboarded`, reopen via the ? button), hotbar slots always active with
+function-first names (`SPOTS[].menu` + ✓ read badges), compact village layout
+with re-drawn paths and walk speed 5.6, RSVP sign + letter on the mailbox, and
+the mobile action button redesigned as a speech-bubble pill ("Read" near a
+landmark, "Next" in a dialog).
 
 ## 5. Smaller portfolio/polish items — optional
 
