@@ -755,7 +755,12 @@ function buildOnboard() {
       <button type="button" class="btn btn-gold" id="onboard-go">Let's go!</button>
       <span class="form-note">You can reopen this anytime from the ? button.</span>
     </div>`;
-  return { title: "How to Play", icon: "sign", html };
+  return {
+    title: "How to Play", icon: "sign", html,
+    mount() {
+      $("#onboard-go").addEventListener("click", () => closeModal());
+    },
+  };
 }
 
 function escapeHTML(s) {
