@@ -378,35 +378,6 @@ button { font: inherit; cursor: pointer; }
   to { transform: scale(1); }
 }
 
-/* --- action hint --- */
-#action-hint {
-  position: absolute;
-  bottom: 92px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0.45em 0.9em;
-  display: flex;
-  align-items: center;
-  gap: 0.6em;
-  font-family: var(--font-pixel);
-  font-weight: 700;
-  font-size: 1rem;
-  animation: hint-float 1.6s ease-in-out infinite;
-}
-@keyframes hint-float {
-  0%, 100% { transform: translate(-50%, 0); }
-  50% { transform: translate(-50%, -5px); }
-}
-.key-cap {
-  background: var(--paper);
-  border: 3px solid var(--wood-darker);
-  border-bottom-width: 5px;
-  border-radius: 8px;
-  padding: 1px 9px;
-  font-size: 0.8rem;
-  color: var(--wood-darker);
-}
-
 /* --- toast --- */
 #toast {
   position: absolute;

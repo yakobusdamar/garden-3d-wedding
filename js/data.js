@@ -39,7 +39,7 @@ export const SPOTS = [
       },
       {
         who: "sign",
-        text: "The chapel holds the details, the farmhouse holds our story, the mailbox wants your RSVP... and the wishing tree is all yours.",
+        text: "The chapel holds the details, the memory garden holds our story, the mailbox wants your RSVP... and the wishing tree is all yours.",
       },
     ],
   },
@@ -64,7 +64,7 @@ export const SPOTS = [
   },
   {
     id: "house",
-    label: "Farmhouse",
+    label: "Memory Garden",
     menu: "Our Story",
     pos: [9, -6],
     r: 3.8,
@@ -72,11 +72,11 @@ export const SPOTS = [
     dialog: [
       {
         who: "nana",
-        text: "This is our farmhouse! Six years of story live in here — from a borrowed umbrella at campus, to this very garden.",
+        text: "Welcome to our memory garden! Six years of story bloom in here — from a borrowed umbrella at campus, to this very day.",
       },
       {
         who: "raka",
-        text: "Come in, come in. Mind the cat, she thinks she owns the place.",
+        text: "Every photo on that tree is a day we kept. Walk the petals slowly — then open the timeline below.",
       },
     ],
     action: { label: "Read our story", modal: "story" },
@@ -143,7 +143,7 @@ export const SPOTS = [
   },
 ];
 
-/* Our Story — shown at the farmhouse. */
+/* Our Story — shown at the memory garden. */
 export const STORY = {
   lead: "Six years, one umbrella, and a garden.",
   items: [

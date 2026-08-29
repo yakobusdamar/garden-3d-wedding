@@ -8,7 +8,7 @@ import { createWorld } from "./world.js";
 import { Player, Bride } from "./player.js";
 import {
   initUI, showDialog, dialogueActive, advance, isModalOpen, closeModal,
-  buildHotbar, lightUpSlot, markSeen, updateHUD, toast, setHint,
+  buildHotbar, lightUpSlot, markSeen, updateHUD, toast,
   isTouch, updateActionButton, showHUD, openModal, setMusicButton,
 } from "./ui.js";
 import { initAudio, setMusic, musicEnabled, bgmState, sfxPop, sfxDing, sfxTook, sfxWarp } from "./audio.js";
@@ -290,24 +290,21 @@ function step() {
   world.update(dt, t, player.position, player.camera);
   bride.update(dt, reducedMotion);
 
-  // proximity: markers + hints + button pulse
-  if (started) {
-    currentSpot = nearestSpot();
-    for (const spot of SPOTS) {
-      const marker = world.markers.get(spot.id);
-      if (marker) marker.visible = spot === currentSpot && !dialogueActive();
+    // proximity: markers + button pulse (no center-screen hint pill — the act button is the one prompt)
+    if (started) {
+      currentSpot = nearestSpot();
+      for (const spot of SPOTS) {
+        const marker = world.markers.get(spot.id);
+        if (marker) marker.visible = spot === currentSpot && !dialogueActive();
+      }
+      if (dialogueActive()) {
+        updateActionButton("next");
+      } else if (currentSpot) {
+        updateActionButton("read");
+      } else {
+        updateActionButton("idle");
+      }
     }
-    if (dialogueActive()) {
-      setHint(null);
-      updateActionButton("next");
-    } else if (currentSpot) {
-      setHint(currentSpot.label);
-      updateActionButton("read");
-    } else {
-      setHint(null);
-      updateActionButton("idle");
-    }
-  }
 
   renderer.render(scene, player.camera);
 }

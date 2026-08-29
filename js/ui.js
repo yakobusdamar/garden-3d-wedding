@@ -325,16 +325,8 @@ export function toast(msg) {
   toastTimer = setTimeout(() => t.classList.add("hidden"), 2900);
 }
 
-export function setHint(label, keyLabel = "Space") {
-  const hint = $("#action-hint");
-  if (!label) {
-    hint.classList.add("hidden");
-    return;
-  }
-  $("#hint-key").textContent = isTouch() ? "" : keyLabel;
-  $("#hint-label").textContent = label;
-  hint.classList.remove("hidden");
-}
+/* legacy center-screen hint pill — element removed; kept as a no-op for old callers */
+export function setHint() {}
 
 /* mobile action button: idle icon → "Read" pill near a landmark → "Next" in dialog */
 let lastActKey = "";

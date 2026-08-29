@@ -184,7 +184,7 @@ function groundTexture() {
   };
   stroke([[0, 19.5], [0, 10], [0, 1.5]], 26); // spawn to plaza
   stroke([[0, 1.5], [-3.5, -2], [-9, -4.1]], 24); // to chapel
-  stroke([[0, 1.5], [4, -1.5], [9, -2.6]], 24); // to farmhouse
+  stroke([[0, 1.5], [4, -1.5], [9, -2.6]], 24); // to memory garden
   stroke([[0, 1.5], [0, -5], [0, -8.3]], 22); // to clock tower
   stroke([[0, 5], [-6, 7], [-9, 7]], 20); // to wishing tree
   stroke([[0, 5], [5, 7], [7.6, 8.5]], 20); // to photo bench
@@ -258,28 +258,49 @@ function buildChapel() {
   return g;
 }
 
-function buildFarmhouse() {
+function buildMemoryGarden() {
   const g = new THREE.Group();
-  g.add(mesh(new THREE.BoxGeometry(5.4, 3, 4.4), lam(0xf2e6c8), 0, 1.5, 0));
-  const roof = mesh(prismRoof(5.9, 2.1, 5), lam(C.roofTerra));
-  roof.position.y = 3;
-  g.add(roof);
-  // chimney
-  g.add(mesh(new THREE.BoxGeometry(0.55, 1.6, 0.55), lam(0xb8a99a), 1.6, 4.1, -0.8));
-  // door + windows
-  g.add(mesh(new THREE.BoxGeometry(1.15, 1.75, 0.14), lam(C.woodLight), 0.6, 0.87, 2.24));
-  g.add(mesh(new THREE.SphereGeometry(0.07, 6, 6), lam(C.gold), 0.95, 0.9, 2.33));
-  for (const wx of [-1.7, 2.2]) {
-    g.add(mesh(new THREE.BoxGeometry(0.9, 0.9, 0.14), lam(0x9fd4ec), wx, 1.7, 2.24));
-    g.add(mesh(new THREE.BoxGeometry(1.02, 0.1, 0.16), lam(C.woodLight), wx, 1.7, 2.24));
-    g.add(mesh(new THREE.BoxGeometry(0.1, 1.02, 0.16), lam(C.woodLight), wx, 1.7, 2.24));
-    // flower box
-    g.add(mesh(new THREE.BoxGeometry(1, 0.22, 0.3), lam(C.wood), wx, 1.1, 2.3));
-    g.add(mesh(new THREE.IcosahedronGeometry(0.13, 0), lam(C.rose, { flatShading: true }), wx - 0.25, 1.28, 2.3));
-    g.add(mesh(new THREE.IcosahedronGeometry(0.13, 0), lam(C.gold, { flatShading: true }), wx + 0.25, 1.28, 2.3));
+  // round stone patio — the garden is walkable, only the tree blocks
+  g.add(mesh(new THREE.CylinderGeometry(2.7, 2.9, 0.12, 20), lam(C.stone), 0, 0.06, 0));
+  g.add(mesh(new THREE.TorusGeometry(2.72, 0.09, 6, 24), lam(0xb8a99a), 0, 0.12, 0).rotateX(Math.PI / 2));
+  // memory tree — blossom canopy with polaroids of the couple hanging from it
+  g.add(mesh(new THREE.CylinderGeometry(0.26, 0.4, 2.6, 8), lam(C.trunk), 0, 1.3, 0));
+  const bloom = lam(0xf0b8cd, { flatShading: true });
+  g.add(mesh(new THREE.IcosahedronGeometry(1.5, 1), bloom, 0, 3.2, 0));
+  g.add(mesh(new THREE.IcosahedronGeometry(1.0, 1), bloom, 0.9, 2.6, 0.5));
+  g.add(mesh(new THREE.IcosahedronGeometry(0.95, 1), bloom, -0.9, 2.7, -0.4));
+  // hanging photo frames
+  const frameMat = lam(0xfdf3dc, { side: THREE.DoubleSide });
+  const photoMat = lam(0xf9c6cf, { side: THREE.DoubleSide });
+  for (const [px, py, pz] of [[0.9, 2.2, 0.5], [-1.0, 2.35, -0.4], [0.3, 1.9, 1.05], [-0.4, 2.5, 0.9], [1.15, 2.7, -0.3], [-0.95, 1.85, 0.55]]) {
+    g.add(mesh(new THREE.BoxGeometry(0.03, 0.34, 0.03), lam(C.trunk), px, py + 0.2, pz));
+    g.add(mesh(new THREE.BoxGeometry(0.3, 0.34, 0.03), frameMat, px, py, pz));
+    g.add(mesh(new THREE.BoxGeometry(0.22, 0.2, 0.035), photoMat, px, py + 0.02, pz));
   }
-  // porch step
-  g.add(mesh(new THREE.BoxGeometry(1.7, 0.22, 0.9), lam(C.stone), 0.6, 0.11, 2.8));
+  // heart-shaped tulip ring on the patio edge
+  for (let i = 0; i < 16; i++) {
+    const t = (i / 16) * Math.PI * 2;
+    const hx = 0.16 * 16 * Math.sin(t) ** 3;
+    const hz = 0.16 * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+    const color = [C.rose, C.gold, 0xffffff][i % 3];
+    g.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.5, 5), lam(0x5c9a4a), hx * 0.82, 0.37, hz * 0.82 - 0.4));
+    g.add(mesh(new THREE.IcosahedronGeometry(0.12, 0), lam(color, { flatShading: true }), hx * 0.82, 0.68, hz * 0.82 - 0.4));
+  }
+  // entrance arch (south) with vine knots + two lanterns flanking it
+  g.add(mesh(new THREE.TorusGeometry(1.35, 0.1, 6, 20, Math.PI), lam(C.wood), 0, 0.02, 3.3));
+  for (const vx of [-0.9, -0.3, 0.3, 0.9]) {
+    g.add(mesh(new THREE.IcosahedronGeometry(0.12, 0), lam(0x5c9a4a, { flatShading: true }), vx, 1.35 - (vx * vx) * 0.35, 3.3));
+  }
+  for (const lx of [-1.9, 1.9]) {
+    g.add(mesh(new THREE.BoxGeometry(0.09, 1.2, 0.09), lam(C.wood), lx, 0.6, 3.0));
+    g.add(mesh(new THREE.BoxGeometry(0.24, 0.3, 0.24), lam(C.gold), lx, 1.32, 3.0));
+    g.add(mesh(new THREE.ConeGeometry(0.2, 0.18, 4), lam(C.wood), lx, 1.55, 3.0));
+  }
+  // stone bench facing the tree
+  g.add(mesh(new THREE.BoxGeometry(1.7, 0.16, 0.5), lam(C.stone), 0, 0.42, -2.2));
+  for (const bx of [-0.65, 0.65]) {
+    g.add(mesh(new THREE.BoxGeometry(0.2, 0.36, 0.42), lam(0xb8a99a), bx, 0.18, -2.2));
+  }
   return g;
 }
 
@@ -417,9 +438,9 @@ function labelPlate(text) {
     tex.needsUpdate = true;
     state.spr.scale.set(state.w * 0.0125, 84 * 0.0125, 1);
   };
-  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false }));
   spr.scale.set(state.w * 0.0125, 84 * 0.0125, 1);
-  spr.renderOrder = 5;
+  spr.renderOrder = 999;
   state.spr = spr;
   return state;
 }
@@ -480,12 +501,16 @@ function buildWishingTree() {
     spr.scale.setScalar(0.52);
     g.add(spr);
   }
-  // little sign at base
-  g.add(mesh(new THREE.BoxGeometry(0.1, 0.9, 0.1), lam(C.wood), 1.1, 0.45, 0.4));
-  const plate = mesh(new THREE.BoxGeometry(0.9, 0.5, 0.07), lam(C.woodLight), 1.1, 1.05, 0.4);
-  g.add(plate);
-  const heart = mesh(new THREE.IcosahedronGeometry(0.11, 0), lam(C.rose, { flatShading: true }), 1.1, 1.08, 0.46);
-  g.add(heart);
+  // little sign at base — kept outside the canopy (leaves reach ~2.1 from the trunk)
+  const sign = new THREE.Group();
+  sign.position.set(2.45, 0, 0.95);
+  sign.rotation.y = Math.PI * 0.28;
+  sign.add(mesh(new THREE.BoxGeometry(0.1, 0.9, 0.1), lam(C.wood), 0, 0.45, 0));
+  const plate = mesh(new THREE.BoxGeometry(0.9, 0.5, 0.07), lam(C.woodLight), 0, 1.05, 0);
+  sign.add(plate);
+  const heart = mesh(new THREE.IcosahedronGeometry(0.11, 0), lam(C.rose, { flatShading: true }), 0, 1.08, 0.06);
+  sign.add(heart);
+  g.add(sign);
   return g;
 }
 
@@ -522,28 +547,39 @@ function polaroidTexture(caption, tint) {
 
 function buildPhotoBench() {
   const g = new THREE.Group();
-  // bench
-  g.add(mesh(new THREE.BoxGeometry(2.2, 0.14, 0.7), lam(C.woodLight), 0, 0.55, 0));
+  // bench — offset left, kept clear of the easel
+  const bench = new THREE.Group();
+  bench.position.set(-0.8, 0, 0.1);
+  bench.add(mesh(new THREE.BoxGeometry(2.2, 0.14, 0.7), lam(C.woodLight), 0, 0.55, 0));
   for (const lx of [-0.9, 0.9]) {
-    g.add(mesh(new THREE.BoxGeometry(0.16, 0.55, 0.6), lam(C.wood), lx, 0.27, 0));
+    bench.add(mesh(new THREE.BoxGeometry(0.16, 0.55, 0.6), lam(C.wood), lx, 0.27, 0));
   }
-  g.add(mesh(new THREE.BoxGeometry(2.2, 0.5, 0.12), lam(C.wood), 0, 0.95, -0.3));
-  // easel with polaroid
-  const leg = (rz) => {
-    const l = mesh(new THREE.BoxGeometry(0.08, 1.7, 0.08), lam(C.wood), 0, 0.85, 0.35);
-    l.rotation.x = rz;
+  bench.add(mesh(new THREE.BoxGeometry(2.2, 0.5, 0.12), lam(C.wood), 0, 0.95, -0.3));
+  g.add(bench);
+  // easel — proper A-frame: front leg forward, two rear legs splayed back,
+  // all meeting at the apex so nothing stabs through the canvas or the bench
+  const easel = new THREE.Group();
+  easel.position.set(1.5, 0, -0.2);
+  easel.rotation.y = -0.3;
+  const apex = { y: 1.9 };
+  const legFromTo = (x, z) => {
+    const len = Math.hypot(apex.y, z);
+    const l = mesh(new THREE.BoxGeometry(0.08, len, 0.08), lam(C.wood), x, apex.y / 2, z / 2);
+    l.rotation.x = Math.atan2(-z, apex.y);
     return l;
   };
-  g.add(leg(0.16));
-  const l2 = leg(-0.16); l2.position.x = -0.3; g.add(l2);
-  const l3 = leg(-0.16); l3.position.x = 0.3; g.add(l3);
+  easel.add(legFromTo(0, 0.62)); // front leg
+  easel.add(legFromTo(-0.4, -0.55)); // rear left
+  easel.add(legFromTo(0.4, -0.55)); // rear right
+  easel.add(mesh(new THREE.BoxGeometry(0.86, 0.07, 0.07), lam(C.wood), 0, 0.62, -0.28)); // crossbar
   const canvas = mesh(
-    new THREE.BoxGeometry(1.1, 1.1, 0.06),
+    new THREE.BoxGeometry(1.05, 1.05, 0.06),
     new THREE.MeshLambertMaterial({ map: polaroidTexture("our bench", "#f9c6cf") }),
-    0, 1.55, 0.25
+    0, 1.26, 0.29
   );
-  canvas.rotation.x = -0.08;
-  g.add(canvas);
+  canvas.rotation.x = -0.32; // parallel to the front leg it rests on — never clips it
+  easel.add(canvas);
+  g.add(easel);
   return g;
 }
 
@@ -635,11 +671,12 @@ export function createWorld(scene) {
   scene.add(chapel);
   addCollider(-9, -7.5, 3.6);
 
-  const house = buildFarmhouse();
+  const house = buildMemoryGarden();
   house.position.set(9, 0, -6);
   house.rotation.y = -Math.PI * 0.14;
   scene.add(house);
-  addCollider(9, -6, 3.2);
+  // the garden itself is walkable — only the memory tree blocks
+  addCollider(9, -6, 0.9);
 
   const tower = buildClockTower();
   tower.position.set(0, 0, -11.5);
@@ -696,8 +733,7 @@ export function createWorld(scene) {
   scene.add(fenceLine(-F, F, F, F));
   scene.add(fenceLine(-F, -F, -F, F));
   scene.add(fenceLine(F, -F, F, F));
-  // farmhouse yard fence
-  scene.add(fenceLine(5.5, -1.6, 14, -1.6));
+  // (the old farmhouse yard fence is gone — it cut across the memory garden entrance)
 
   /* flowers */
   const [stems, heads] = flowerInstanced(140);
@@ -777,20 +813,32 @@ export function createWorld(scene) {
     scene.add(bf);
   }
 
-  /* interaction markers above each spot */
-  const MARKER_Y = { chapel: 9.5, house: 5.4, clock: 10.2, mailbox: 2.4, gallery: 3.4, wish: 6.2, sign: 2.6 };
-  for (const id of Object.keys(MARKER_Y)) {
+  /* interaction markers — positioned AT their spot (never at origin), lifted just
+     above the landmark so the bubble is where the camera actually looks */
+  const MARKER_SPOT = {
+    chapel: { y: 3.1, dz: 3.6 }, // in front of the entrance tower, above the flower arch
+    house: { y: 4.0 }, // floats over the memory tree canopy
+    clock: { y: 3.6, dz: 2.4 }, // south of the tower column
+    mailbox: { y: 2.4 },
+    gallery: { y: 3.2 },
+    wish: { y: 6.2 },
+    sign: { y: 2.6 },
+  };
+  for (const [id, cfg] of Object.entries(MARKER_SPOT)) {
+    const spot = SPOTS.find((s) => s.id === id);
     const m = buildMarker();
     m.visible = false;
-    m.userData.baseY = MARKER_Y[id];
+    m.userData.baseY = cfg.y;
+    m.position.set(spot.pos[0] + (cfg.dx || 0), cfg.y, spot.pos[1] + (cfg.dz || 0));
     markers.set(id, m);
     scene.add(m);
   }
 
-  /* permanent name labels above each landmark */
+  /* permanent name labels — fixed height above the ground for every landmark,
+     drawn over geometry so tall buildings (chapel spire) never hide them */
   for (const spot of SPOTS) {
     const lab = labelPlate(spot.menu);
-    lab.spr.position.set(spot.pos[0], MARKER_Y[spot.id] + 1.05, spot.pos[1]);
+    lab.spr.position.set(spot.pos[0], 3.4, spot.pos[1]);
     scene.add(lab.spr);
     anim.labels.push({ spr: lab.spr, redraw: lab.redraw, x: spot.pos[0], z: spot.pos[1], r: spot.r });
   }

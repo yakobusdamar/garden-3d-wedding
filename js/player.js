@@ -20,6 +20,7 @@ const bootMat = new THREE.MeshLambertMaterial({ color: 0x7c4f2a });
 const dressMat = new THREE.MeshLambertMaterial({ color: 0xfffaf0 });
 const hairMat = new THREE.MeshLambertMaterial({ color: 0x4a3222 });
 const roseMat = new THREE.MeshLambertMaterial({ color: 0xe97fa2, flatShading: true });
+const tuxMat = new THREE.MeshLambertMaterial({ color: 0x2e2e38 });
 
 function part(geo, mat, parent, x = 0, y = 0, z = 0) {
   const m = new THREE.Mesh(geo, mat);
@@ -55,37 +56,39 @@ function addFace(head, blushColor = 0xf0a8b8) {
 function buildGroom() {
   const g = new THREE.Group();
 
-  // legs
-  const legL = limb(g, denimMat, 0.09, 0.22, -0.12, 0.46);
-  const legR = limb(g, denimMat, 0.09, 0.22, 0.12, 0.46);
+  // legs — black trousers
+  const legL = limb(g, tuxMat, 0.09, 0.22, -0.12, 0.46);
+  const legR = limb(g, tuxMat, 0.09, 0.22, 0.12, 0.46);
   part(new THREE.BoxGeometry(0.16, 0.1, 0.24), bootMat, legL, 0, -0.32, 0.04);
   part(new THREE.BoxGeometry(0.16, 0.1, 0.24), bootMat, legR, 0, -0.32, 0.04);
 
-  // body (denim overalls over cream shirt)
-  part(new THREE.CapsuleGeometry(0.26, 0.3, 4, 8), shirtMat, g, 0, 0.86, 0);
-  const bib = part(new THREE.BoxGeometry(0.3, 0.26, 0.05), denimMat, g, 0, 0.98, 0.24);
-  bib.rotation.x = -0.08;
-  for (const sx of [-0.13, 0.13]) {
-    const strap = part(new THREE.BoxGeometry(0.07, 0.3, 0.04), denimMat, g, sx, 1.16, 0.21);
-    strap.rotation.x = -0.25;
+  // body — black tuxedo jacket over a white shirt
+  part(new THREE.CapsuleGeometry(0.26, 0.3, 4, 8), tuxMat, g, 0, 0.86, 0);
+  const shirt = part(new THREE.BoxGeometry(0.17, 0.34, 0.05), dressMat, g, 0, 0.92, 0.245);
+  shirt.rotation.x = -0.06;
+  // lapels
+  for (const sx of [-0.1, 0.1]) {
+    const lapel = part(new THREE.BoxGeometry(0.08, 0.26, 0.04), tuxMat, g, sx, 0.98, 0.27);
+    lapel.rotation.z = sx > 0 ? -0.5 : 0.5;
   }
-  part(new THREE.IcosahedronGeometry(0.05, 0), roseMat, g, 0, 0.95, 0.28);
+  // bow tie, shirt buttons, boutonniere
+  part(new THREE.BoxGeometry(0.06, 0.05, 0.04), roseMat, g, -0.045, 1.16, 0.27);
+  part(new THREE.BoxGeometry(0.06, 0.05, 0.04), roseMat, g, 0.045, 1.16, 0.27);
+  part(new THREE.SphereGeometry(0.024, 6, 6), roseMat, g, 0, 1.16, 0.29);
+  part(new THREE.SphereGeometry(0.022, 6, 6), dressMat, g, 0, 0.82, 0.28);
+  part(new THREE.SphereGeometry(0.022, 6, 6), dressMat, g, 0, 0.72, 0.28);
+  part(new THREE.IcosahedronGeometry(0.05, 0), roseMat, g, -0.15, 1.05, 0.26);
 
-  // arms
-  const armL = limb(g, shirtMat, 0.075, 0.24, -0.33, 1.06);
-  const armR = limb(g, shirtMat, 0.075, 0.24, 0.33, 1.06);
+  // arms — jacket sleeves
+  const armL = limb(g, tuxMat, 0.075, 0.24, -0.33, 1.06);
+  const armR = limb(g, tuxMat, 0.075, 0.24, 0.33, 1.06);
   armL.rotation.z = 0.22;
   armR.rotation.z = -0.22;
 
-  // head + straw hat
+  // head + neatly combed dark hair
   const head = part(new THREE.SphereGeometry(0.31, 14, 12), skinMat, g, 0, 1.5, 0);
   addFace(head, 0xe8a184);
-  const brim = part(new THREE.CylinderGeometry(0.5, 0.55, 0.06, 12), strawMat, head, 0, 0.22, 0);
-  part(new THREE.ConeGeometry(0.34, 0.26, 12), strawMat, head, 0, 0.37, 0);
-  part(new THREE.CylinderGeometry(0.35, 0.36, 0.07, 12), new THREE.MeshLambertMaterial({ color: 0xd15e84 }), head, 0, 0.26, 0);
-
-  // little backpack
-  part(new THREE.BoxGeometry(0.34, 0.4, 0.18), strawMat, g, 0, 0.92, -0.32);
+  part(new THREE.SphereGeometry(0.325, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.52), hairMat, head, 0, 0.03, -0.02);
 
   return { group: g, legL, legR, armL, armR, head };
 }
@@ -93,34 +96,38 @@ function buildGroom() {
 function buildBride() {
   const g = new THREE.Group();
 
-  // skirt (no legs — feet peek shyly under the hem)
-  const skirt = part(new THREE.ConeGeometry(0.44, 0.62, 10), dressMat, g, 0, 0.36, 0);
-  part(new THREE.SphereGeometry(0.07, 6, 6), bootMat, g, -0.1, 0.06, 0.12);
-  part(new THREE.SphereGeometry(0.07, 6, 6), bootMat, g, 0.1, 0.06, 0.12);
+  // gown — two flowing tiers, feet peeking shyly under the hem
+  const skirt = part(new THREE.ConeGeometry(0.54, 0.56, 12), dressMat, g, 0, 0.3, 0);
+  part(new THREE.ConeGeometry(0.4, 0.44, 12), dressMat, g, 0, 0.66, 0);
+  part(new THREE.SphereGeometry(0.07, 6, 6), bootMat, g, -0.1, 0.05, 0.14);
+  part(new THREE.SphereGeometry(0.07, 6, 6), bootMat, g, 0.1, 0.05, 0.14);
 
-  // body
-  part(new THREE.CapsuleGeometry(0.22, 0.24, 4, 8), dressMat, g, 0, 0.92, 0);
-  const sash = part(new THREE.CylinderGeometry(0.235, 0.235, 0.07, 10), roseMat, g, 0, 0.98, 0);
+  // bodice with a rose waist sash
+  part(new THREE.CapsuleGeometry(0.2, 0.24, 4, 8), dressMat, g, 0, 0.98, 0);
+  part(new THREE.CylinderGeometry(0.225, 0.24, 0.08, 12), roseMat, g, 0, 0.86, 0);
+  part(new THREE.SphereGeometry(0.035, 6, 6), roseMat, g, 0, 0.86, 0.23);
 
   // arms
-  const armL = limb(g, skinMat, 0.065, 0.22, -0.28, 1.06);
-  const armR = limb(g, skinMat, 0.065, 0.22, 0.28, 1.06);
+  const armL = limb(g, skinMat, 0.065, 0.22, -0.28, 1.08);
+  const armR = limb(g, skinMat, 0.065, 0.22, 0.28, 1.08);
   armL.rotation.z = 0.26;
   armR.rotation.z = -0.26;
 
   // tiny bouquet held in front
-  part(new THREE.IcosahedronGeometry(0.09, 0), roseMat, g, 0, 0.92, 0.34);
-  part(new THREE.IcosahedronGeometry(0.07, 0), new THREE.MeshLambertMaterial({ color: 0xfffaf0, flatShading: true }), g, 0.1, 0.99, 0.32);
-  part(new THREE.IcosahedronGeometry(0.06, 0), new THREE.MeshLambertMaterial({ color: 0xf5c84c, flatShading: true }), g, -0.09, 1.0, 0.32);
+  part(new THREE.IcosahedronGeometry(0.1, 0), roseMat, g, 0, 0.94, 0.34);
+  part(new THREE.IcosahedronGeometry(0.07, 0), dressMat, g, 0.1, 1.01, 0.32);
+  part(new THREE.IcosahedronGeometry(0.06, 0), new THREE.MeshLambertMaterial({ color: 0xf5c84c, flatShading: true }), g, -0.09, 1.02, 0.32);
 
-  // head, hair bun, flower, veil
-  const head = part(new THREE.SphereGeometry(0.3, 14, 12), skinMat, g, 0, 1.48, 0);
+  // head, swept-up hair, flower crown, long veil
+  const head = part(new THREE.SphereGeometry(0.3, 14, 12), skinMat, g, 0, 1.5, 0);
   addFace(head, 0xf0a8b8);
-  const hairCap = part(new THREE.SphereGeometry(0.315, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), hairMat, head, 0, 0.03, -0.02);
-  part(new THREE.SphereGeometry(0.12, 8, 8), hairMat, head, 0, 0.26, -0.22); // bun
-  part(new THREE.IcosahedronGeometry(0.07, 0), roseMat, head, 0.1, 0.3, -0.16); // flower on bun
-  const veil = part(new THREE.PlaneGeometry(0.5, 0.62), new THREE.MeshLambertMaterial({ color: 0xfffaf0, side: THREE.DoubleSide, transparent: true, opacity: 0.85 }), head, 0, -0.05, -0.3);
-  veil.rotation.x = 0.28;
+  part(new THREE.SphereGeometry(0.315, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), hairMat, head, 0, 0.03, -0.02);
+  part(new THREE.SphereGeometry(0.12, 8, 8), hairMat, head, 0, 0.22, -0.26); // low bun
+  for (const [fx, fy] of [[-0.14, 0.27], [0, 0.31], [0.14, 0.27]]) {
+    part(new THREE.IcosahedronGeometry(0.055, 0), roseMat, head, fx, fy, 0.14); // flower crown
+  }
+  const veil = part(new THREE.PlaneGeometry(0.62, 0.82), new THREE.MeshLambertMaterial({ color: 0xfffaf0, side: THREE.DoubleSide, transparent: true, opacity: 0.8 }), head, 0, -0.1, -0.32);
+  veil.rotation.x = 0.3;
 
   return { group: g, armL, armR, skirt, head, veil };
 }

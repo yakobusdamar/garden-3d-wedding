@@ -38,9 +38,9 @@ export function initAudio() {
   musicGain = ctx.createGain();
   musicGain.gain.value = 0;
   musicGain.connect(masterGain);
-  // SFX ride their own bus at the same level as the BGM element (0.55)
+  // SFX bus rides above the BGM bed (BGM 0.42) so blips/chimes stay crisp
   sfxGain = ctx.createGain();
-  sfxGain.gain.value = 0.55;
+  sfxGain.gain.value = 0.72;
   sfxGain.connect(masterGain);
 }
 
@@ -154,7 +154,7 @@ export function setMusic(on) {
     const attempt = bgm.play();
     if (attempt) {
       attempt
-        .then(() => bgmFadeTo(0.55, 1.6))
+        .then(() => bgmFadeTo(0.42, 1.6))
         .catch((err) => {
           if (err && (err.name === "NotAllowedError" || err.name === "AbortError")) {
             // autoplay policy / browser power-saving pauses background media —
@@ -187,7 +187,7 @@ function retryBgmSoon() {
       const again = bgm.play();
       if (again) {
         again
-          .then(() => bgmFadeTo(0.55, 1.2))
+          .then(() => bgmFadeTo(0.42, 1.2))
           .catch((e) => {
             if (e && (e.name === "NotAllowedError" || e.name === "AbortError")) retryBgmSoon();
           });
