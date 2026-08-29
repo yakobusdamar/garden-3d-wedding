@@ -228,6 +228,7 @@ document.getElementById("btn-start").addEventListener("click", () => {
   }
   setMusic(wantMusic);
   setMusicButton(musicEnabled());
+  if (!wantMusic) toast("Music is muted — tap ♪ (top right) for the waltz");
   setTimeout(() => {
     const intro = () => showDialog(
       [

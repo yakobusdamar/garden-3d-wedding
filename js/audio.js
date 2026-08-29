@@ -7,6 +7,7 @@
 let ctx = null;
 let masterGain = null;
 let musicGain = null;
+let sfxGain = null;
 let musicOn = false;
 let schedulerId = null;
 let nextNoteTime = 0;
@@ -32,11 +33,15 @@ export function initAudio() {
   if (!AC) return;
   ctx = new AC();
   masterGain = ctx.createGain();
-  masterGain.gain.value = 0.9;
+  masterGain.gain.value = 1.0;
   masterGain.connect(ctx.destination);
   musicGain = ctx.createGain();
   musicGain.gain.value = 0;
   musicGain.connect(masterGain);
+  // SFX ride their own bus at the same level as the BGM element (0.55)
+  sfxGain = ctx.createGain();
+  sfxGain.gain.value = 0.55;
+  sfxGain.connect(masterGain);
 }
 
 function tone(freq, time, dur, type, peak, dest) {
@@ -169,10 +174,15 @@ export function setMusic(on) {
   }
 }
 
-/* schedule a BGM retry for when the page is interacted with / visible again */
+/* schedule a BGM retry for the guest's next interaction or when visible again */
+let bgmRetryArmed = false;
 function retryBgmSoon() {
+  if (bgmRetryArmed) return;
+  bgmRetryArmed = true;
+  const events = ["pointerdown", "click", "keydown", "touchstart", "visibilitychange"];
   const retry = () => {
-    document.removeEventListener("visibilitychange", retry);
+    for (const ev of events) document.removeEventListener(ev, retry);
+    bgmRetryArmed = false;
     if (musicOn && bgm) {
       const again = bgm.play();
       if (again) {
@@ -184,8 +194,7 @@ function retryBgmSoon() {
       }
     }
   };
-  document.addEventListener("pointerdown", retry, { once: true });
-  document.addEventListener("visibilitychange", retry);
+  for (const ev of events) document.addEventListener(ev, retry);
 }
 
 export function musicEnabled() {
@@ -210,9 +219,9 @@ export function sfxPop() {
   osc.type = "sine";
   osc.frequency.setValueAtTime(340, t);
   osc.frequency.exponentialRampToValueAtTime(160, t + 0.12);
-  env.gain.setValueAtTime(0.16, t);
+  env.gain.setValueAtTime(0.5, t);
   env.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
-  osc.connect(env).connect(masterGain);
+  osc.connect(env).connect(sfxGain);
   osc.start(t);
   osc.stop(t + 0.16);
 }
@@ -224,9 +233,9 @@ export function sfxBlip() {
   const env = ctx.createGain();
   osc.type = "square";
   osc.frequency.value = 820 + Math.random() * 140;
-  env.gain.setValueAtTime(0.018, t);
+  env.gain.setValueAtTime(0.06, t);
   env.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
-  osc.connect(env).connect(masterGain);
+  osc.connect(env).connect(sfxGain);
   osc.start(t);
   osc.stop(t + 0.06);
 }
@@ -239,9 +248,9 @@ export function sfxTypeBlip(baseFreq) {
   const env = ctx.createGain();
   osc.type = "square";
   osc.frequency.value = baseFreq * (0.93 + Math.random() * 0.14);
-  env.gain.setValueAtTime(0.02, t);
+  env.gain.setValueAtTime(0.07, t);
   env.gain.exponentialRampToValueAtTime(0.0001, t + 0.042);
-  osc.connect(env).connect(masterGain);
+  osc.connect(env).connect(sfxGain);
   osc.start(t);
   osc.stop(t + 0.05);
 }
@@ -255,9 +264,9 @@ export function sfxTook() {
   osc.type = "sine";
   osc.frequency.setValueAtTime(330, t);
   osc.frequency.exponentialRampToValueAtTime(190, t + 0.1);
-  env.gain.setValueAtTime(0.08, t);
+  env.gain.setValueAtTime(0.28, t);
   env.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-  osc.connect(env).connect(masterGain);
+  osc.connect(env).connect(sfxGain);
   osc.start(t);
   osc.stop(t + 0.14);
 }
@@ -266,15 +275,15 @@ export function sfxTook() {
 export function sfxPing() {
   if (!sfxContext()) return;
   const t = ctx.currentTime;
-  tone(987.8, t, 0.22, "sine", 0.06, masterGain);
-  tone(1318.5, t + 0.09, 0.3, "sine", 0.05, masterGain);
+  tone(987.8, t, 0.22, "sine", 0.2, sfxGain);
+  tone(1318.5, t + 0.09, 0.3, "sine", 0.17, sfxGain);
 }
 
 export function sfxDing() {
   if (!sfxContext()) return;
   const t = ctx.currentTime;
-  tone(1174.7, t, 0.5, "sine", 0.12, masterGain);
-  tone(1568, t + 0.07, 0.6, "sine", 0.09, masterGain);
+  tone(1174.7, t, 0.5, "sine", 0.42, sfxGain);
+  tone(1568, t + 0.07, 0.6, "sine", 0.32, sfxGain);
 }
 
 export function sfxWarp() {
@@ -285,9 +294,9 @@ export function sfxWarp() {
   osc.type = "triangle";
   osc.frequency.setValueAtTime(260, t);
   osc.frequency.exponentialRampToValueAtTime(1040, t + 0.28);
-  env.gain.setValueAtTime(0.1, t);
+  env.gain.setValueAtTime(0.32, t);
   env.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
-  osc.connect(env).connect(masterGain);
+  osc.connect(env).connect(sfxGain);
   osc.start(t);
   osc.stop(t + 0.4);
 }
