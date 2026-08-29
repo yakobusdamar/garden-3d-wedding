@@ -11,7 +11,7 @@ import {
   buildHotbar, lightUpSlot, markSeen, updateHUD, toast, setHint,
   isTouch, updateActionButton, showHUD, openModal, setMusicButton,
 } from "./ui.js";
-import { initAudio, setMusic, musicEnabled, sfxPop, sfxDing, sfxTook, sfxWarp } from "./audio.js";
+import { initAudio, setMusic, musicEnabled, bgmState, sfxPop, sfxDing, sfxTook, sfxWarp } from "./audio.js";
 
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -186,6 +186,9 @@ document.getElementById("btn-music").addEventListener("click", () => {
   initAudio();
   setMusic(!musicEnabled());
   setMusicButton(musicEnabled());
+  try {
+    localStorage.setItem("pb_music", musicEnabled() ? "1" : "0");
+  } catch { /* private mode */ }
   if (musicEnabled()) sfxDing();
   else sfxTook();
 });
@@ -216,6 +219,15 @@ document.getElementById("btn-start").addEventListener("click", () => {
   initAudio();
   updateHUD();
   sfxDing();
+  // BGM: the waltz starts softly from the gate, unless the guest muted it before
+  let wantMusic = true;
+  try {
+    wantMusic = localStorage.getItem("pb_music") !== "0";
+  } catch {
+    wantMusic = true;
+  }
+  setMusic(wantMusic);
+  setMusicButton(musicEnabled());
   setTimeout(() => {
     const intro = () => showDialog(
       [
@@ -322,4 +334,5 @@ window.__pb = {
   world,
   scene,
   interact: tryInteract,
+  bgm: bgmState,
 };

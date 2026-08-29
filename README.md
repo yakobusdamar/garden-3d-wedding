@@ -25,7 +25,7 @@ Then open the printed URL (e.g. `http://localhost:8000`).
 | Walk | WASD / arrows, or click the ground | left joystick, or tap the ground |
 | Read / interact | Space, E, or Enter (also the on-screen hint) | round **A** button |
 | Visit any place | click its slot in the hotbar — the couple strolls there and opens it (✓ = already read) | same |
-| Music | note button, top right | same |
+| Music | note button, top right — the waltz plays softly from the gate; the button mutes it (choice is remembered) | same |
 | Help | **?** button, top right | same |
 
 Places you've visited are pinned to the hotbar. RSVPs, wishes and visited
@@ -65,6 +65,9 @@ over the drawn keepsake.
 
 ## Notes
 
+- BGM is `audio/bgm.mp3` ("Waltz of the Morning Harvest"). To use your own
+  track, replace that file keeping the same name — if it's missing, the game
+  falls back to a tiny procedural music-box tune.
 - First visit opens a short "How to Play" card; guests can reopen it anytime
   from the ? button.
 - `?touch=1` forces the mobile controls (handy for previewing on desktop).

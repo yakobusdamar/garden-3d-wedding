@@ -742,7 +742,7 @@ function buildHelp() {
       <div class="info-row"><span class="info-label">Pack</span>
         <span class="info-value">Every place is pinned to the hotbar — click one and the couple strolls there. A ✓ means you've already read it.</span></div>
       <div class="info-row"><span class="info-label">Music</span>
-        <span class="info-value">The little note button, top right — off by default, on by choice. The little letter-beeps and clicks stay on; they're part of the charm.</span></div>
+        <span class="info-value">A waltz starts softly when you open the gate — the note button (top right) mutes it, and it remembers your choice. The letter-beeps and clicks stay on; they're part of the charm.</span></div>
     </div>`;
   return { title: "How to Play", icon: "heart", html };
 }

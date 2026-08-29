@@ -73,29 +73,127 @@ function scheduler() {
   }
 }
 
+/* ============================================================
+   BGM — "Waltz of the Morning Harvest" (audio/bgm.mp3).
+   Fades in/out; if the file is missing it falls back to the
+   procedural music box below so the village is never silent.
+   ============================================================ */
+
+let bgm = null; // HTMLAudioElement
+let bgmBroken = false;
+let bgmFade = null;
+
+function initBgm() {
+  if (bgm || bgmBroken) return;
+  bgm = new Audio("audio/bgm.mp3");
+  bgm.loop = true;
+  bgm.volume = 0;
+  bgm.preload = "auto";
+  bgm.addEventListener("error", () => {
+    bgmBroken = true;
+    if (musicOn) {
+      bgm = null;
+      startChiptune();
+    }
+  });
+}
+
+function bgmFadeTo(target, seconds, onDone) {
+  clearInterval(bgmFade);
+  if (!bgm) return;
+  const steps = Math.max(1, Math.round((seconds * 1000) / 50));
+  let i = 0;
+  const from = bgm.volume;
+  bgmFade = setInterval(() => {
+    i++;
+    bgm.volume = from + (target - from) * (i / steps);
+    if (i >= steps) {
+      clearInterval(bgmFade);
+      bgm.volume = target;
+      if (onDone) onDone();
+    }
+  }, 50);
+}
+
+function startChiptune() {
+  if (ctx.state === "suspended") ctx.resume();
+  if (!schedulerId) {
+    nextNoteTime = ctx.currentTime + 0.1;
+    schedulerId = setInterval(scheduler, 90);
+  }
+  musicGain.gain.cancelScheduledValues(ctx.currentTime);
+  musicGain.gain.linearRampToValueAtTime(0.85, ctx.currentTime + 1.2);
+}
+
+function stopChiptune() {
+  musicGain.gain.cancelScheduledValues(ctx.currentTime);
+  musicGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.6);
+  setTimeout(() => {
+    if (!musicOn && schedulerId) {
+      clearInterval(schedulerId);
+      schedulerId = null;
+    }
+  }, 700);
+}
+
 export function setMusic(on) {
   musicOn = on;
   if (!ctx) return;
+  if (ctx.state === "suspended") ctx.resume();
   if (on) {
-    if (ctx.state === "suspended") ctx.resume();
-    nextNoteTime = ctx.currentTime + 0.1;
-    if (!schedulerId) schedulerId = setInterval(scheduler, 90);
-    musicGain.gain.cancelScheduledValues(ctx.currentTime);
-    musicGain.gain.linearRampToValueAtTime(0.85, ctx.currentTime + 1.2);
+    if (bgmBroken) {
+      startChiptune();
+      return;
+    }
+    initBgm();
+    const attempt = bgm.play();
+    if (attempt) {
+      attempt
+        .then(() => bgmFadeTo(0.55, 1.6))
+        .catch((err) => {
+          if (err && (err.name === "NotAllowedError" || err.name === "AbortError")) {
+            // autoplay policy / browser power-saving pauses background media —
+            // retry on the guest's next tap or when the tab is visible again
+            retryBgmSoon();
+            return;
+          }
+          // couldn't start the file (missing/broken) — music box takes over
+          bgmBroken = true;
+          bgm = null;
+          startChiptune();
+        });
+    }
   } else {
-    musicGain.gain.cancelScheduledValues(ctx.currentTime);
-    musicGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.6);
-    setTimeout(() => {
-      if (!musicOn && schedulerId) {
-        clearInterval(schedulerId);
-        schedulerId = null;
-      }
-    }, 700);
+    if (bgm && !bgm.paused) bgmFadeTo(0, 0.7, () => bgm.pause());
+    stopChiptune();
   }
+}
+
+/* schedule a BGM retry for when the page is interacted with / visible again */
+function retryBgmSoon() {
+  const retry = () => {
+    document.removeEventListener("visibilitychange", retry);
+    if (musicOn && bgm) {
+      const again = bgm.play();
+      if (again) {
+        again
+          .then(() => bgmFadeTo(0.55, 1.2))
+          .catch((e) => {
+            if (e && (e.name === "NotAllowedError" || e.name === "AbortError")) retryBgmSoon();
+          });
+      }
+    }
+  };
+  document.addEventListener("pointerdown", retry, { once: true });
+  document.addEventListener("visibilitychange", retry);
 }
 
 export function musicEnabled() {
   return musicOn;
+}
+
+export function bgmState() {
+  return bgm ? { playing: !bgm.paused, volume: +bgm.volume.toFixed(2), ready: bgm.readyState } : null;
 }
 
 /* ---------- SFX ---------- */
