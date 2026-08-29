@@ -219,22 +219,29 @@ function buildChapel() {
   const roof = mesh(prismRoof(6.6, 2.2, 5.6), lam(C.roofRose));
   roof.position.y = 3.6;
   g.add(roof);
-  // tower + spire
-  g.add(mesh(new THREE.BoxGeometry(1.6, 5.2, 1.6), lam(C.cream), 0, 2.6, -2.6));
-  g.add(mesh(new THREE.ConeGeometry(1.3, 1.9, 4), lam(C.roofRose), 0, 6.15, -2.6, Math.PI / 4));
-  g.add(mesh(new THREE.SphereGeometry(0.16, 8, 8), lam(C.gold), 0, 7.25, -2.6));
-  // door (wood, arched top)
-  g.add(mesh(new THREE.BoxGeometry(1.3, 1.9, 0.16), lam(C.woodLight), 0, 0.95, 2.55));
-  const arch = mesh(new THREE.CircleGeometry(0.65, 16, 0, Math.PI), lam(C.woodLight), 0, 1.9, 2.56);
+  // tower + spire at the FRONT (over the entrance), crowned with a proper cross —
+  // dark slate spire so the silhouette reads "church" against the rose roof and sky
+  g.add(mesh(new THREE.BoxGeometry(1.6, 5.2, 1.6), lam(C.cream), 0, 2.6, 2.2));
+  g.add(mesh(new THREE.ConeGeometry(1.3, 1.9, 4), lam(0x46506a), 0, 6.15, 2.2, Math.PI / 4));
+  const crossGold = lam(C.gold);
+  g.add(mesh(new THREE.BoxGeometry(0.18, 1.4, 0.18), crossGold, 0, 7.85, 2.2));
+  g.add(mesh(new THREE.BoxGeometry(0.95, 0.18, 0.18), crossGold, 0, 8.2, 2.2));
+  // door (wood, arched top) set into the tower base
+  g.add(mesh(new THREE.BoxGeometry(1.3, 1.9, 0.16), lam(C.woodLight), 0, 0.95, 3.02));
+  const arch = mesh(new THREE.CircleGeometry(0.65, 16, 0, Math.PI), lam(C.woodLight), 0, 1.9, 3.03);
   g.add(arch);
+  // big gold cross on the tower face above the door — the follow camera looks down,
+  // so this is the cross you actually see walking up the path (spire cross is the silhouette)
+  g.add(mesh(new THREE.BoxGeometry(0.18, 1.3, 0.14), crossGold, 0, 2.95, 3.06));
+  g.add(mesh(new THREE.BoxGeometry(0.9, 0.18, 0.14), crossGold, 0, 3.2, 3.06));
   // windows (gold glass)
   for (const wx of [-2, 2]) {
     g.add(mesh(new THREE.BoxGeometry(0.8, 1.1, 0.14), lam(C.gold), wx, 1.9, 2.53));
     g.add(mesh(new THREE.BoxGeometry(0.14, 1.1, 0.16), lam(C.cream), wx, 1.9, 2.54));
     g.add(mesh(new THREE.BoxGeometry(0.8, 0.14, 0.16), lam(C.cream), wx, 1.9, 2.54));
   }
-  // rose window on tower
-  g.add(mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.1, 16), lam(C.rose), 0, 4.4, -1.76).rotateX(Math.PI / 2));
+  // rose window on the tower face, above the door
+  g.add(mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.1, 16), lam(C.rose), 0, 4.4, 3.06).rotateX(Math.PI / 2));
   // flower arch in front of the door
   const archTorus = mesh(new THREE.TorusGeometry(1.5, 0.12, 6, 24, Math.PI), lam(0x5c9a4a), 0, 0, 3.4);
   g.add(archTorus);
@@ -408,13 +415,31 @@ function labelPlate(text) {
   state.redraw = () => {
     state.w = draw();
     tex.needsUpdate = true;
-    state.spr.scale.set(state.w * 0.0105, 84 * 0.0105, 1);
+    state.spr.scale.set(state.w * 0.0125, 84 * 0.0125, 1);
   };
   const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
-  spr.scale.set(state.w * 0.0105, 84 * 0.0105, 1);
+  spr.scale.set(state.w * 0.0125, 84 * 0.0125, 1);
   spr.renderOrder = 5;
   state.spr = spr;
   return state;
+}
+
+function heartSpriteTexture() {
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 64;
+  const g = cv.getContext("2d");
+  g.fillStyle = "#d15e84";
+  g.strokeStyle = "#5b3a1f";
+  g.lineWidth = 4;
+  g.beginPath();
+  g.moveTo(32, 54);
+  g.bezierCurveTo(6, 36, 8, 14, 32, 22);
+  g.bezierCurveTo(56, 14, 58, 36, 32, 54);
+  g.fill();
+  g.stroke();
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }
 
 function buildWishingTree() {
@@ -441,6 +466,19 @@ function buildWishingTree() {
     tag.rotation.y = Math.random() * Math.PI;
     g.add(tag);
     g.userData.tags.push(tag);
+  }
+  // hanging hearts — this is the love tree, after all
+  const heartTex = heartSpriteTexture();
+  // deterministic spread so hearts always ring the canopy edge, some dangling low
+  const heartSpots = [
+    [2.3, 2.6, 0.4], [-2.4, 3.0, -0.3], [1.7, 1.8, 1.9], [-1.6, 2.2, -2.1],
+    [0.6, 1.4, 2.5], [-0.5, 3.4, 2.3], [2.5, 3.6, -1.2], [-2.2, 1.6, 1.4],
+  ];
+  for (const [hx, hy, hz] of heartSpots) {
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: heartTex, transparent: true }));
+    spr.position.set(hx, hy, hz);
+    spr.scale.setScalar(0.52);
+    g.add(spr);
   }
   // little sign at base
   g.add(mesh(new THREE.BoxGeometry(0.1, 0.9, 0.1), lam(C.wood), 1.1, 0.45, 0.4));
@@ -512,18 +550,19 @@ function buildPhotoBench() {
 /* ---------- "!" speech bubble markers ---------- */
 function buildMarker() {
   const g = new THREE.Group();
-  const bubble = mesh(new THREE.SphereGeometry(0.42, 12, 10), lam(C.white));
+  const bubble = mesh(new THREE.SphereGeometry(0.55, 12, 10), lam(C.white));
   bubble.castShadow = false;
   bubble.scale.set(1, 0.82, 1);
   g.add(bubble);
-  // exclamation mark
-  const bar = mesh(new THREE.BoxGeometry(0.11, 0.3, 0.06), lam(C.rose), 0, 0.06, 0.4);
+  // exclamation mark — deep rose so it pops against sky and grass
+  const alertMat = lam(0xd15e84);
+  const bar = mesh(new THREE.BoxGeometry(0.14, 0.4, 0.07), alertMat, 0, 0.08, 0.52);
   bar.castShadow = false;
-  const dot = mesh(new THREE.SphereGeometry(0.06, 6, 6), lam(C.rose), 0, -0.19, 0.4);
+  const dot = mesh(new THREE.SphereGeometry(0.075, 6, 6), alertMat, 0, -0.24, 0.52);
   dot.castShadow = false;
   g.add(bar, dot);
   // little tail
-  const tail = mesh(new THREE.ConeGeometry(0.12, 0.22, 4), lam(C.white), 0, -0.42, 0);
+  const tail = mesh(new THREE.ConeGeometry(0.16, 0.28, 4), lam(C.white), 0, -0.54, 0);
   tail.rotation.x = Math.PI;
   tail.castShadow = false;
   g.add(tail);
@@ -587,7 +626,7 @@ export function createWorld(scene) {
     pad.castShadow = false;
     scene.add(pad);
   }
-  addCollider(-7, 15, 4.4);
+  addCollider(-7, 15, 3.8);
 
   /* buildings at data.js coordinates */
   const chapel = buildChapel();
@@ -616,7 +655,7 @@ export function createWorld(scene) {
   const wishingTree = buildWishingTree();
   wishingTree.position.set(-12, 0, 7);
   scene.add(wishingTree);
-  addCollider(-12, 7, 1.5);
+  addCollider(-12, 7, 1.1);
   anim.tags = wishingTree.userData.tags;
 
   const bench = buildPhotoBench();
@@ -648,7 +687,7 @@ export function createWorld(scene) {
   ];
   for (const [x, z, s, c] of treeSpots) {
     scene.add(tree(x, z, s, c));
-    addCollider(x, z, 0.55 * s + 0.3);
+    addCollider(x, z, 0.4 * s + 0.15);
   }
 
   /* fences framing the world */
@@ -657,8 +696,6 @@ export function createWorld(scene) {
   scene.add(fenceLine(-F, F, F, F));
   scene.add(fenceLine(-F, -F, -F, F));
   scene.add(fenceLine(F, -F, F, F));
-  // chapel garden fence
-  scene.add(fenceLine(-13.5, -4.2, -6, -4.2));
   // farmhouse yard fence
   scene.add(fenceLine(5.5, -1.6, 14, -1.6));
 
@@ -741,7 +778,7 @@ export function createWorld(scene) {
   }
 
   /* interaction markers above each spot */
-  const MARKER_Y = { chapel: 8.4, house: 5.4, clock: 10.2, mailbox: 2.4, gallery: 3.4, wish: 6.2, sign: 2.6 };
+  const MARKER_Y = { chapel: 9.5, house: 5.4, clock: 10.2, mailbox: 2.4, gallery: 3.4, wish: 6.2, sign: 2.6 };
   for (const id of Object.keys(MARKER_Y)) {
     const m = buildMarker();
     m.visible = false;
@@ -802,7 +839,7 @@ export function createWorld(scene) {
     // landmark labels: fade with distance, shy when you're close enough to read
     for (const l of anim.labels) {
       const d = Math.hypot(playerPos.x - l.x, playerPos.z - l.z);
-      l.spr.material.opacity = THREE.MathUtils.clamp(1.35 - d / 24, 0, 1) * (d < l.r ? 0.25 : 1);
+      l.spr.material.opacity = THREE.MathUtils.clamp(1.55 - d / 26, 0.3, 1) * (d < l.r ? 0.3 : 1);
       l.spr.visible = l.spr.material.opacity > 0.02;
     }
     // markers bob & face camera
