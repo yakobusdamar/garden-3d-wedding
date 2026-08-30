@@ -170,9 +170,17 @@ export class Player {
 
     // camera rig
     this.camera = new THREE.PerspectiveCamera(46, innerWidth / innerHeight, 0.1, 160);
-    this.camPos = new THREE.Vector3(0, 8, 30);
+    this.viewScale = 1;
+    this.updateViewScale();
+    this.camPos = new THREE.Vector3(0, 8 * this.viewScale, 30 * this.viewScale);
     this.camLook = new THREE.Vector3(0, 1.4, 20);
     this.camera.position.copy(this.camPos);
+  }
+
+  /* touch devices: zoom the game camera out — same angle, farther back —
+     so the village doesn't feel cropped on a small screen. Desktop unchanged. */
+  updateViewScale() {
+    this.viewScale = matchMedia("(pointer: coarse)").matches ? 1.45 : 1;
   }
 
   get position() {
@@ -250,8 +258,8 @@ export class Player {
     }
     this.group.rotation.y = this.heading;
 
-    // --- follow camera (behind & above, gently lagging) ---
-    const desired = new THREE.Vector3(pos.x, pos.y + 7.6, pos.z + 10.2);
+    // --- follow camera (behind & above, gently lagging; zoomed out on touch) ---
+    const desired = new THREE.Vector3(pos.x, pos.y + 7.6 * this.viewScale, pos.z + 10.2 * this.viewScale);
     const k = 1 - Math.exp(-4.2 * dt);
     this.camPos.lerp(desired, k);
     this.camLook.lerp(new THREE.Vector3(pos.x, pos.y + 1.5, pos.z - 0.5), k);
