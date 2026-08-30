@@ -257,7 +257,7 @@ document.getElementById("btn-start").addEventListener("click", () => {
 addEventListener("resize", () => {
   renderer.setSize(innerWidth, innerHeight);
   player.camera.aspect = innerWidth / innerHeight;
-  player.updateViewScale();
+  player.camera.updateProjectionMatrix();
 });
 
 /* ---------- main loop ---------- */

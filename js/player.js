@@ -170,22 +170,9 @@ export class Player {
 
     // camera rig
     this.camera = new THREE.PerspectiveCamera(46, innerWidth / innerHeight, 0.1, 160);
-    this.viewScale = 1;
-    this.updateViewScale();
-    this.camPos = new THREE.Vector3(0, 8 * this.viewScale, 30 * this.viewScale);
+    this.camPos = new THREE.Vector3(0, 8, 30);
     this.camLook = new THREE.Vector3(0, 1.4, 20);
     this.camera.position.copy(this.camPos);
-  }
-
-  /* portrait phones crop the sides hard (horizontal FOV collapses with aspect),
-     so pull the follow camera back and open the lens a touch. Landscape/desktop
-     keeps the exact same framing. */
-  updateViewScale() {
-    const aspect = innerWidth / innerHeight;
-    const widthHunger = THREE.MathUtils.clamp(1.15 / aspect, 1, 2.6);
-    this.viewScale = Math.pow(widthHunger, 0.55);
-    this.camera.fov = 46 * Math.pow(widthHunger, 0.18);
-    this.camera.updateProjectionMatrix();
   }
 
   get position() {
@@ -263,8 +250,8 @@ export class Player {
     }
     this.group.rotation.y = this.heading;
 
-    // --- follow camera (behind & above, gently lagging; pulled back on portrait) ---
-    const desired = new THREE.Vector3(pos.x, pos.y + 7.6 * this.viewScale, pos.z + 10.2 * this.viewScale);
+    // --- follow camera (behind & above, gently lagging) ---
+    const desired = new THREE.Vector3(pos.x, pos.y + 7.6, pos.z + 10.2);
     const k = 1 - Math.exp(-4.2 * dt);
     this.camPos.lerp(desired, k);
     this.camLook.lerp(new THREE.Vector3(pos.x, pos.y + 1.5, pos.z - 0.5), k);
