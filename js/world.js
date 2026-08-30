@@ -583,34 +583,11 @@ function buildPhotoBench() {
   return g;
 }
 
-/* ---------- "!" speech bubble markers ---------- */
-function buildMarker() {
-  const g = new THREE.Group();
-  const bubble = mesh(new THREE.SphereGeometry(0.55, 12, 10), lam(C.white));
-  bubble.castShadow = false;
-  bubble.scale.set(1, 0.82, 1);
-  g.add(bubble);
-  // exclamation mark — deep rose so it pops against sky and grass
-  const alertMat = lam(0xd15e84);
-  const bar = mesh(new THREE.BoxGeometry(0.14, 0.4, 0.07), alertMat, 0, 0.08, 0.52);
-  bar.castShadow = false;
-  const dot = mesh(new THREE.SphereGeometry(0.075, 6, 6), alertMat, 0, -0.24, 0.52);
-  dot.castShadow = false;
-  g.add(bar, dot);
-  // little tail
-  const tail = mesh(new THREE.ConeGeometry(0.16, 0.28, 4), lam(C.white), 0, -0.54, 0);
-  tail.rotation.x = Math.PI;
-  tail.castShadow = false;
-  g.add(tail);
-  return g;
-}
-
 /* ============================================================
    MAIN BUILDER
    ============================================================ */
 export function createWorld(scene) {
   const colliders = []; // {x, z, r}
-  const markers = new Map(); // spot id -> marker group
   const anim = { tags: [], butterflies: [], petals: null, clouds: [], labels: [] };
   const addCollider = (x, z, r) => colliders.push({ x, z, r });
 
@@ -813,27 +790,6 @@ export function createWorld(scene) {
     scene.add(bf);
   }
 
-  /* interaction markers — positioned AT their spot (never at origin), lifted just
-     above the landmark so the bubble is where the camera actually looks */
-  const MARKER_SPOT = {
-    chapel: { y: 3.1, dz: 3.6 }, // in front of the entrance tower, above the flower arch
-    house: { y: 4.0 }, // floats over the memory tree canopy
-    clock: { y: 3.6, dz: 2.4 }, // south of the tower column
-    mailbox: { y: 2.4 },
-    gallery: { y: 3.2 },
-    wish: { y: 6.2 },
-    sign: { y: 2.6 },
-  };
-  for (const [id, cfg] of Object.entries(MARKER_SPOT)) {
-    const spot = SPOTS.find((s) => s.id === id);
-    const m = buildMarker();
-    m.visible = false;
-    m.userData.baseY = cfg.y;
-    m.position.set(spot.pos[0] + (cfg.dx || 0), cfg.y, spot.pos[1] + (cfg.dz || 0));
-    markers.set(id, m);
-    scene.add(m);
-  }
-
   /* permanent name labels — fixed height above the ground for every landmark,
      drawn over geometry so tall buildings (chapel spire) never hide them */
   for (const spot of SPOTS) {
@@ -890,13 +846,7 @@ export function createWorld(scene) {
       l.spr.material.opacity = THREE.MathUtils.clamp(1.55 - d / 26, 0.3, 1) * (d < l.r ? 0.3 : 1);
       l.spr.visible = l.spr.material.opacity > 0.02;
     }
-    // markers bob & face camera
-    for (const [, m] of markers) {
-      if (!m.visible) continue;
-      m.position.y = m.userData.baseY + Math.sin(t * 2.6) * 0.14;
-      m.rotation.y = Math.atan2(camera.position.x - m.position.x, camera.position.z - m.position.z);
-    }
   }
 
-  return { colliders, markers, update, sun };
+  return { colliders, update, sun };
 }

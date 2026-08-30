@@ -290,13 +290,9 @@ function step() {
   world.update(dt, t, player.position, player.camera);
   bride.update(dt, reducedMotion);
 
-    // proximity: markers + button pulse (no center-screen hint pill — the act button is the one prompt)
+    // proximity: button pulse (the act button is the one prompt — no bubbles, no hint pill)
     if (started) {
       currentSpot = nearestSpot();
-      for (const spot of SPOTS) {
-        const marker = world.markers.get(spot.id);
-        if (marker) marker.visible = spot === currentSpot && !dialogueActive();
-      }
       if (dialogueActive()) {
         updateActionButton("next");
       } else if (currentSpot) {
