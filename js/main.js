@@ -234,9 +234,9 @@ document.getElementById("btn-start").addEventListener("click", () => {
       [
         { who: "nana", text: `Welcome to Petalbrook! You found our little village — this whole place is your invitation.` },
         { who: "raka", text: isTouch()
-          ? "Drag the joystick or tap the ground to walk. When a spot bubbles up, tap Read to open it!"
-          : "Walk with WASD or the arrow keys — or just click the ground. When a spot bubbles up, press Space to read it!" },
-        { who: "nana", text: `And yes, I go where he goes. Pick a place from the pack below and we'll stroll there together — or just wander. I'll keep up.` },
+          ? "Drag the joystick or tap the ground to walk. Get close to a place, then tap Read to open it!"
+          : "Walk with WASD or the arrow keys — or just click the ground. Get close to a place, then press Space to read it!" },
+        { who: "nana", text: `Let's go! I'll keep up. ♥` },
       ],
       null,
       () => toast("Visit the mailbox first — it wants your RSVP ✿")
