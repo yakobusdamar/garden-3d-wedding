@@ -169,26 +169,28 @@ function groundTexture() {
   g.arc(px(-7), pz(15), 4.6 * PX, 0, 7);
   g.fill();
 
-  // paths
-  const stroke = (pts, width) => {
-    g.strokeStyle = "#c09a5c";
-    g.lineWidth = width + 7;
-    g.lineCap = g.lineJoin = "round";
+  // paths — every dark edge is drawn first, every light fill second, so the
+  // fills cover the seams where routes cross; endpoints aim at the real
+  // entrances (chapel door and garden arch are both rotated off-axis)
+  const PATHS = [
+    [[[0, 19.5], [0, 10], [0, 1.5]], 26],       // spawn to plaza
+    [[[0, 1.5], [-3.5, -2], [-7.8, -4.1]], 24], // to the chapel door
+    [[[0, 1.5], [4, -1.5], [7.6, -3.0]], 24],   // to the memory garden arch
+    [[[0, 1.5], [0, -5], [0, -9.4]], 22],       // to clock tower
+    [[[0, 5], [-6, 7], [-10.4, 7]], 20],        // to wishing tree
+    [[[0, 5], [5, 7], [9.6, 8.4]], 20],         // to photo bench
+    [[[0, 12], [1.4, 14], [2.8, 14.5]], 14],    // mailbox spur
+  ];
+  const trace = (pts) => {
     g.beginPath();
     g.moveTo(px(pts[0][0]), pz(pts[0][1]));
     for (const p of pts.slice(1)) g.lineTo(px(p[0]), pz(p[1]));
-    g.stroke();
-    g.strokeStyle = "#d9b078";
-    g.lineWidth = width;
-    g.stroke();
   };
-  stroke([[0, 19.5], [0, 10], [0, 1.5]], 26); // spawn to plaza
-  stroke([[0, 1.5], [-3.5, -2], [-9, -4.1]], 24); // to chapel
-  stroke([[0, 1.5], [4, -1.5], [9, -2.6]], 24); // to memory garden
-  stroke([[0, 1.5], [0, -5], [0, -8.3]], 22); // to clock tower
-  stroke([[0, 5], [-6, 7], [-9, 7]], 20); // to wishing tree
-  stroke([[0, 5], [5, 7], [7.6, 8.5]], 20); // to photo bench
-  stroke([[0, 12], [1.4, 14], [2.8, 14.5]], 14); // mailbox spur
+  g.lineCap = g.lineJoin = "round";
+  g.strokeStyle = "#c09a5c";
+  for (const [pts, w] of PATHS) { g.lineWidth = w + 7; trace(pts); g.stroke(); }
+  g.strokeStyle = "#d9b078";
+  for (const [pts, w] of PATHS) { g.lineWidth = w; trace(pts); g.stroke(); }
   g.fillStyle = "#d9b078";
   g.beginPath(); g.arc(px(0), pz(1.5), 2.6 * PX, 0, 7); g.fill();
   g.beginPath(); g.arc(px(0), pz(19.2), 1.8 * PX, 0, 7); g.fill();

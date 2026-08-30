@@ -750,12 +750,12 @@ function buildOnboard() {
     ? [
         { icon: WALK_ICON, text: "<b>Walk:</b> drag the round joystick — or just tap the ground where you want to go." },
         { icon: SPEECH_ICON, text: "<b>Read:</b> stand near a landmark and tap the gold <b>Read</b> button. Its story types itself out." },
-        { icon: PIN_ICON, text: "<b>Travel:</b> tap any place in the pack below and the couple strolls over. A ✓ means you've read it." },
+        { icon: PIN_ICON, text: "<b>Travel:</b> tap any place in the bar below and the couple strolls over. A ✓ means you've read it." },
       ]
     : [
         { icon: WALK_ICON, text: "<b>Walk:</b> WASD or arrow keys — or simply click the ground where you want to go." },
         { icon: SPEECH_ICON, text: "<b>Read:</b> stand near a landmark and press <b>Space</b>. Its story types itself out." },
-        { icon: PIN_ICON, text: "<b>Travel:</b> click any place in the pack below and the couple strolls over. A ✓ means you've read it." },
+        { icon: PIN_ICON, text: "<b>Travel:</b> click any place in the bar below and the couple strolls over. A ✓ means you've read it." },
       ];
   const html = `
     <p class="lead">Three things and you're a villager.</p>

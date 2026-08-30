@@ -236,7 +236,7 @@ document.getElementById("btn-start").addEventListener("click", () => {
         { who: "raka", text: isTouch()
           ? "Drag the joystick or tap the ground to walk. Get close to a place, then tap Read to open it!"
           : "Walk with WASD or the arrow keys — or just click the ground. Get close to a place, then press Space to read it!" },
-        { who: "nana", text: `Let's go! I'll keep up. ♥` },
+        { who: "nana", text: `Ready? Let's stroll around our little village. ♥` },
       ],
       null,
       () => toast("Visit the mailbox first — it wants your RSVP ✿")
